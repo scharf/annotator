@@ -617,8 +617,7 @@ class window.DomTextMapper
   # Returns:
   #    the first character offset position in the content of this node's
   #    parent node that is not accounted for by this node
-  collectPositions: (node, path, parentContent = null,
-      parentIndex = 0, index = 0) ->
+  collectPositions: (node, path, parentContent = null, parentIndex = 0, index = 0) ->
 #    console.log "Scanning path " + path    
 #    content = @getNodeContent node, false
 
