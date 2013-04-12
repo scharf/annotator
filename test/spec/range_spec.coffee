@@ -36,9 +36,9 @@ describe 'Range', ->
   describe "SerializedRange", ->
     beforeEach ->
       r = new Range.SerializedRange
-        start: "/p/strong"
+        startContainer: "/p/strong"
         startOffset: 13
-        end: "/p/strong"
+        endContainer: "/p/strong"
         endOffset: 27
 
     describe "normalize", ->
@@ -65,19 +65,19 @@ describe 'Range', ->
 
     it "serialize() returns a serialized range", ->
       seri = r.serialize(fix())
-      assert.equal(seri.start, "/p[1]/strong[1]")
+      assert.equal(seri.startContainer, "/p[1]/strong[1]")
       assert.equal(seri.startOffset, 13)
-      assert.equal(seri.end, "/p[1]/strong[1]")
+      assert.equal(seri.endContainer, "/p[1]/strong[1]")
       assert.equal(seri.endOffset, 27)
       assert.isTrue(seri instanceof Range.SerializedRange)
 
     it "toObject() returns a simple object", ->
       obj = r.toObject()
-      assert.equal(obj.start, "/p/strong")
+      assert.equal(obj.startContainer, "/p/strong")
       assert.equal(obj.startOffset, 13)
-      assert.equal(obj.end, "/p/strong")
+      assert.equal(obj.endContainer, "/p/strong")
       assert.equal(obj.endOffset, 27)
-      assert.equal(JSON.stringify(obj), '{"start":"/p/strong","startOffset":13,"end":"/p/strong","endOffset":27}')
+      assert.equal(JSON.stringify(obj), '{"startContainer":"/p/strong","startOffset":13,"endContainer":"/p/strong","endOffset":27}')
 
   describe "BrowserRange", ->
     beforeEach ->
@@ -86,7 +86,7 @@ describe 'Range', ->
 
     it "normalize() returns a normalized range", ->
       norm = r.normalize()
-      assert.equal(norm.start, norm.end)
+      assert.equal(norm.startContainer, norm.endContainer)
       assert.equal(textInNormedRange(norm), 'habitant morbi')
 
     testBrowserRange = (i) ->
