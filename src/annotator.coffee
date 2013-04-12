@@ -499,6 +499,8 @@ class Annotator extends Delegator
   #
   # Returns a normalized range if succeeded, null otherwise
   findAnchor: (target) ->
+    unless targer?
+      throw new Error "Trying to find anchor for null target!"
     console.log "Trying to find anchor for target: "
     console.log target
 
@@ -545,6 +547,8 @@ class Annotator extends Delegator
   setupAnnotation: (annotation) ->
     root = @wrapper[0]
     annotation.target or= @selectedTargets
+    unless annotation.target?
+      throw new Error "Can not run setupAnnotation(), since @selectedTargets is null!"
 
     unless annotation.target instanceof Array
       annotation.target = [annotation.target]
