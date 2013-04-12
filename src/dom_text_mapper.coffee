@@ -197,7 +197,10 @@ class window.DomTextMapper
     result
 
   # Return info for a given node in the DOM
-  getInfoForNode: (node) -> @getInfoForPath @getPathTo node
+  getInfoForNode: (node) ->
+    unless node?
+      throw new Error "Called getInfoForNode(node) with null node!"
+    @getInfoForPath @getPathTo node
 
   # Get the matching DOM elements for a given set of charRanges
   # (Calles getMappingsForCharRange for each element in the givenl ist)
