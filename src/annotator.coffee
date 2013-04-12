@@ -228,8 +228,17 @@ class Annotator extends Delegator
       endOffset: sr.endOffset
 
   getTextQuoteSelector: (range) ->
-    startOffset = (@domMapper.getInfoForNode range.start).start
-    endOffset = (@domMapper.getInfoForNode range.end).end
+    unless range?
+      throw new Error "Called getTextQuoteSelector(range) with null range!"
+
+    rangeStart = range.start
+    unless rangeStart?
+      throw new Error "Called getTextQuoteSelector(range) on a range with no valid start."
+    startOffset = (@domMapper.getInfoForNode rangeStart).start
+    rangeEnd = range.end
+    unless rangeEnd?
+      throw new Error" Called getTextQuoteSelector(range) on a range with no valid end."
+    endOffset = (@domMapper.getInfoForNode rangeEnd).end
 
     quote = @domMapper.getContentForCharRange startOffset, endOffset
     [prefix, suffix] = @domMapper.getContextForCharRange startOffset, endOffset
@@ -270,6 +279,8 @@ class Annotator extends Delegator
   #
   # Returns Array of NormalizedRange instances.
   getSelectedTargets: ->
+    unless @domMapper?
+      throw new Error "Can not execute getSelectedTargets() before _setupMatching()!"
     selection = util.getGlobal().getSelection()
     source = this.getHref()
 
