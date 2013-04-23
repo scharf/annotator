@@ -102,11 +102,14 @@ class Annotator extends Delegator
     this.adder = $(this.html.adder).appendTo(@wrapper).hide()
 
   _setupMatching: ->
-    this.domMapper = new DomTextMapper()
-    this.domMatcher = new DomTextMatcher @domMapper
+    @domMapper = new DomTextMapper()
+    @domMatcher = new DomTextMatcher @domMapper
 
     this
 
+  _scan: ->
+    @domMatcher.scan()   
+ 
   # Wraps the children of @element in a @wrapper div. NOTE: This method will also
   # remove any script elements inside @element to prevent them re-executing.
   #
@@ -121,9 +124,7 @@ class Annotator extends Delegator
     @element.find('script').remove()
     @element.wrapInner(@wrapper)
     @wrapper = @element.find('.annotator-wrapper')
-
-    # TODO: do somthing like this:
-    # this.domMapper.setRootNode @wrapper[0].get()
+#    @domMapper.setRootNode @wrapper[0].get()
 
     this
 
@@ -237,7 +238,7 @@ class Annotator extends Delegator
     startOffset = (@domMapper.getInfoForNode rangeStart).start
     rangeEnd = range.end
     unless rangeEnd?
-      throw new Error" Called getTextQuoteSelector(range) on a range with no valid end."
+      throw new Error "Called getTextQuoteSelector(range) on a range with no valid end."
     endOffset = (@domMapper.getInfoForNode rangeEnd).end
 
     quote = @domMapper.getContentForCharRange startOffset, endOffset
@@ -281,6 +282,8 @@ class Annotator extends Delegator
   getSelectedTargets: ->
     unless @domMapper?
       throw new Error "Can not execute getSelectedTargets() before _setupMatching()!"
+    unless @wrapper
+      throw new Error "Can not execute getSelectedTargets() before @wrapper is configured!"
     selection = util.getGlobal().getSelection()
     source = this.getHref()
 
