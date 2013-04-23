@@ -389,6 +389,8 @@ class window.DomTextMapper
   getPathTo: (node) ->
     xpath = '';
     while node != @rootNode
+      unless node?
+        throw new Error "Called getPathTo on a node which was not a descendant of @rootNode. " + @rootNode   
       xpath = (@getPathSegment node) + '/' + xpath
       node = node.parentNode
     xpath = (if @rootNode.ownerDocument? then './' else '/') + xpath
