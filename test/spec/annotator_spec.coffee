@@ -2,7 +2,10 @@ describe 'Annotator', ->
   annotator = null
   mock = null
 
-  beforeEach -> annotator = new Annotator($('<div></div>')[0], {})
+  beforeEach ->
+    annotator = new Annotator($('<div></div>')[0], {})
+    annotator._setupMatching()
+
   afterEach  -> $(document).unbind()
 
   describe "events", ->
@@ -269,26 +272,52 @@ describe 'Annotator', ->
 
       $fix.hide()
 
-  describe "getSelectedRanges", ->
+  describe "getSelectedTargets", ->
     mockGlobal = null
     mockSelection = null
     mockRange = null
     mockBrowserRange = null
+    mockSerializedRange = null
 
     beforeEach ->
+
+      headText  = document.createTextNode("My Heading")
+      paraText  = document.createTextNode("My paragraph")
+      paraText2 = document.createTextNode(" continues")
+
+      head = document.createElement('h1')
+      head.appendChild(headText)
+      para = document.createElement('p')
+      para.appendChild(paraText)
+      para.appendChild(paraText2)
+
+      root = document.createElement('div')
+      root.appendChild(head)
+      root.appendChild(para)
+
+      annotator.domMapper.setRootNode root
+      annotator._scan()
+
       mockBrowserRange = {
         cloneRange: sinon.stub()
       }
       mockBrowserRange.cloneRange.returns(mockBrowserRange)
 
-      # This mock pretends to be both NormalizedRange and BrowserRange.
+      mockSerializedRange = {
+        normalize: jasmine.createSpy('BrowserRange#normalize()')
+      }
+
       mockRange = {
         limit: sinon.stub()
         normalize: sinon.stub()
         toRange: sinon.stub().returns('range')
+        serialize: jasmine.createSpy('NormalizedRange#serialize()').andReturn(mockSerializedRange)
+        start: paraText
+        end: paraText2
       }
       mockRange.limit.returns(mockRange)
       mockRange.normalize.returns(mockRange)
+      mockSerializedRange.normalize.andReturn(mockRange)
 
       # https://developer.mozilla.org/en/nsISelection
       mockSelection = {
@@ -307,13 +336,17 @@ describe 'Annotator', ->
       util.getGlobal.restore()
       Range.BrowserRange.restore()
 
-    it "should retrieve the global object and call getSelection()", ->
-      annotator.getSelectedRanges()
+    it "should retrieve the global object and call getSelection() and serialize() 1", ->
+      annotator.getSelectedTargets()
       assert(mockGlobal.getSelection.calledOnce)
+      assert(mockRange.serialize.calledOnce)
 
-    it "should retrieve the global object and call getSelection()", ->
-      ranges = annotator.getSelectedRanges()
-      assert.deepEqual(ranges, [mockRange])
+    it "should retrieve the global object and call getSelection() and serialize() 2", ->
+      targets = annotator.getSelectedTargets()
+      firstTarget = targets[0]
+      selector = this.findSelector firstTarget.selector, "RangeSelector"
+      range = (Range.sniff selector).normalize()
+      assert.equal(range, [mockRange])
 
     it "should remove any failed calls to NormalizedRange#limit(), but re-add them to the global selection", ->
       mockRange.limit.returns(null)
