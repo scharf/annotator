@@ -490,7 +490,7 @@ class Annotator extends Delegator
 
     # Do the fuzzy search
     options =
-      matchDistance: len
+      matchDistance: len * 2
       withFuzzyComparison: true
     result = @domMatcher.searchFuzzy quote, expectedStart, false, null, options
 
@@ -586,8 +586,8 @@ class Annotator extends Delegator
           normedRanges.push anchor.range
           annotation.quote.push t.quote
         else
-          console.log "Could not find anchor for annotation target '" + t.id +
-              "' (for annotation '" + annotation.id + "')."
+          console.log "Could not find anchor target for annotation '" +
+              annotation.id + "'."
       catch exception
         if exception.stack? then console.log exception.stack
         console.log exception.message
@@ -857,7 +857,14 @@ class Annotator extends Delegator
       return
 
     # Get the currently selected ranges.
-    @selectedTargets = this.getSelectedTargets()
+    try
+      @selectedTargets = this.getSelectedTargets()
+    catch exception
+      console.log "Error while checking selection:"
+      console.log exception.stack
+      alert "There is something very strange about the current selection. Sorry, but I can not annotate this."
+      return
+
     for target in @selectedTargets
       selector = this.findSelector target.selector, "RangeSelector"
       range = (Range.sniff selector).normalize @wrapper[0]
