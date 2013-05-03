@@ -95,18 +95,25 @@ class Annotator extends Delegator
     # Return early if the annotator is not supported.
     return this unless Annotator.supported()
     this._setupDocumentEvents() unless @options.readOnly
+    this._setupMatching() unless @options.noMatching
     this._setupWrapper()._setupViewer()._setupEditor()
     this._setupDynamicStyle()
+
+    # Perform initial DOM scan, unless told not to.
+    this._scan() unless (@options.noScan or @options.noMatching)
 
     # Create adder
     this.adder = $(this.html.adder).appendTo(@wrapper).hide()
 
+  # Initializes the components used for analyzing the DOM
   _setupMatching: ->
+        
     @domMapper = new DomTextMapper()
     @domMatcher = new DomTextMatcher @domMapper
 
     this
 
+  # Perform a scan of the DOM. Required for finding anchors.
   _scan: ->
     @domMatcher.scan()   
  
@@ -124,7 +131,7 @@ class Annotator extends Delegator
     @element.find('script').remove()
     @element.wrapInner(@wrapper)
     @wrapper = @element.find('.annotator-wrapper')
-#    @domMapper.setRootNode @wrapper[0].get()
+    @domMapper.setRootNode @wrapper[0]
 
     this
 
@@ -513,7 +520,7 @@ class Annotator extends Delegator
   #
   # Returns a normalized range if succeeded, null otherwise
   findAnchor: (target) ->
-    unless targer?
+    unless target?
       throw new Error "Trying to find anchor for null target!"
     console.log "Trying to find anchor for target: "
     console.log target
