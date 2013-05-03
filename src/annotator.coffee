@@ -574,17 +574,17 @@ class Annotator extends Delegator
     unless annotation.target instanceof Array
       annotation.target = [annotation.target]
 
-    normedRanges = []
+    normedRanges     = []
+    annotation.quote = []
+
     for t in annotation.target
       try
         anchor = this.findAnchor t
-        if anchor?.quote?
-          # We have found a changed quote.
-          # Save it for this target (currently not used)
-          t.quote = anchor.quote
-          t.diffHTML = anchor.diffHTML
+        t.quote = anchor.quote
+        t.diffHTML = anchor.diffHTML
         if anchor?.range?
           normedRanges.push anchor.range
+          annotation.quote.push t.quote
         else
           console.log "Could not find anchor target for annotation '" +
               annotation.id + "'."
@@ -593,20 +593,16 @@ class Annotator extends Delegator
         console.log exception.message
         console.log exception
 
-# TODO for resurrecting Annotator
-#    annotation.currentQuote      = []
-#    annotation.currentRanges     = []
+
+    annotation.ranges     = []
     annotation.highlights = []
 
     for normed in normedRanges
-# TODO for resurrecting Annotator
-#      annotation.currentQuote.push      $.trim(normed.text())
-#      annotation.currentRanges.push     normed.serialize(@wrapper[0], '.annotator-hl')
+      annotation.ranges.push normed.serialize(@wrapper[0], '.annotator-hl')
       $.merge annotation.highlights, this.highlightRange(normed)
 
     # Join all the quotes into one string.
-# TODO for resurrecting Annotator#
-#    annotation.currentQuote = annotation.currentQuote.join(' / ')
+    annotation.quote = annotation.quote.join(' / ')
 
     # Save the annotation data on each highlighter element.
     $(annotation.highlights).data('annotation', annotation)
