@@ -80,9 +80,8 @@ base64UrlDecode = (data) ->
   base64Decode(data)
 
 parseToken = (token) ->
-#  [head, payload, sig] = token.split('.')
-#  JSON.parse(base64UrlDecode(payload))
-  JSON.parse token
+  [head, payload, sig] = token.split('.')
+  JSON.parse(base64UrlDecode(payload))
 
 # Public: Supports the Store plugin by providing Authentication headers.
 class Annotator.Plugin.Auth extends Annotator.Plugin
@@ -195,8 +194,8 @@ class Annotator.Plugin.Auth extends Annotator.Plugin
   # Returns true if the token is valid.
   haveValidToken: () ->
     allFields = @_unsafeToken &&
-                @_unsafeToken.authTokenIssueTime &&
-                @_unsafeToken.authTokenTTL &&
+                @_unsafeToken.issuedAt &&
+                @_unsafeToken.ttl &&
                 @_unsafeToken.consumerKey
 
     allFields && this.timeToExpiry() > 0
@@ -206,9 +205,9 @@ class Annotator.Plugin.Auth extends Annotator.Plugin
   # Returns Number of seconds until token expires.
   timeToExpiry: ->
     now = new Date().getTime() / 1000
-    issue = createDateFromISO8601(@_unsafeToken.authTokenIssueTime).getTime() / 1000
+    issue = createDateFromISO8601(@_unsafeToken.issuedAt).getTime() / 1000
 
-    expiry = issue + @_unsafeToken.authTokenTTL
+    expiry = issue + @_unsafeToken.ttl
     timeToExpiry = expiry - now
 
     if (timeToExpiry > 0) then timeToExpiry else 0
