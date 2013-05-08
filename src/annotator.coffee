@@ -388,7 +388,7 @@ class Annotator extends Delegator
   # Try to determine the anchor position for a target
   # using the saved position selector. The quote is verified.
   findAnchorFromPositionSelector: (target) ->
-    selector = this.findSelector target.selector, "TextPosition"
+    selector = this.findSelector target.selector, "TextPositionSelector"
     unless selector? then return null
     savedQuote = this.getQuoteForTarget target
     if savedQuote?
@@ -437,7 +437,7 @@ class Annotator extends Delegator
 
     # If we did not got a result, give up
     unless result.matches.length
-      console.log "Fuzzy matching did not return any results. Giving up."
+      console.log "Fuzzy matching did not return any results. Giving up on two-phase strategy."
       return null
 
     # here is our result
@@ -477,13 +477,13 @@ class Annotator extends Delegator
 
     # Do the fuzzy search
     options =
-      matchDistance: len
+      matchDistance: len * 2
       withFuzzyComparison: true
     result = @domMatcher.searchFuzzy quote, expectedStart, false, null, options
 
     # If we did not got a result, give up
     unless result.matches.length
-      console.log "Fuzzy matching did not return any results. Giving up."
+      console.log "Fuzzy matching did not return any results. Giving up on one-phase strategy."
       return null
 
     # here is our result
@@ -569,8 +569,8 @@ class Annotator extends Delegator
         if anchor?.range?
           normedRanges.push anchor.range
         else
-          console.log "Could not find anchor for annotation target '" + t.id +
-              "' (for annotation '" + annotation.id + "')."
+          console.log "Could not find anchor target for annotation '" +
+              annotation.id + "'."
       catch exception
         if exception.stack? then console.log exception.stack
         console.log exception.message
@@ -844,7 +844,14 @@ class Annotator extends Delegator
       return
 
     # Get the currently selected ranges.
-    @selectedTargets = this.getSelectedTargets()
+    try
+      @selectedTargets = this.getSelectedTargets()
+    catch exception
+      console.log "Error while checking selection:"
+      console.log exception.stack
+      alert "There is something very strange about the current selection. Sorry, but I can not annotate this."
+      return
+
     for target in @selectedTargets
       selector = this.findSelector target.selector, "RangeSelector"
       range = (Range.sniff selector).normalize @wrapper[0]
