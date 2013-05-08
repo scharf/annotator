@@ -95,7 +95,11 @@ class Annotator extends Delegator
     # Return early if the annotator is not supported.
     return this unless Annotator.supported()
     this._setupDocumentEvents() unless @options.readOnly
+    this._setupMatching() unless @options.noMatching
     this._setupWrapper()._setupViewer()._setupEditor()
+
+    # Perform initial DOM scan, unless told not to.
+    this._scan() unless (@options.noScan or @options.noMatching)
 
     setTimeout (=>
       @log?.info "Gonna setup dynamic style"
@@ -109,12 +113,18 @@ class Annotator extends Delegator
     # TODO: Find a more sensible timeout value, or (preferably)
     # execute this using a faster and/or non-blocking method
 
+  # Initializes the components used for analyzing the DOM
   _setupMatching: ->
-    this.domMapper = new DomTextMapper()
-    this.domMatcher = new DomTextMatcher @domMapper
+        
+    @domMapper = new DomTextMapper()
+    @domMatcher = new DomTextMatcher @domMapper
 
     this
 
+  # Perform a scan of the DOM. Required for finding anchors.
+  _scan: ->
+    @domMatcher.scan()   
+ 
   # Wraps the children of @element in a @wrapper div. NOTE: This method will also
   # remove any script elements inside @element to prevent them re-executing.
   #
@@ -129,9 +139,7 @@ class Annotator extends Delegator
     @element.find('script').remove()
     @element.wrapInner(@wrapper)
     @wrapper = @element.find('.annotator-wrapper')
-
-    # TODO: do somthing like this:
-    # this.domMapper.setRootNode @wrapper[0].get()
+    @domMapper.setRootNode @wrapper[0]
 
     this
 
@@ -236,8 +244,17 @@ class Annotator extends Delegator
       endOffset: sr.endOffset
 
   getTextQuoteSelector: (range) ->
-    startOffset = (@domMapper.getInfoForNode range.start).start
-    endOffset = (@domMapper.getInfoForNode range.end).end
+    unless range?
+      throw new Error "Called getTextQuoteSelector(range) with null range!"
+
+    rangeStart = range.start
+    unless rangeStart?
+      throw new Error "Called getTextQuoteSelector(range) on a range with no valid start."
+    startOffset = (@domMapper.getInfoForNode rangeStart).start
+    rangeEnd = range.end
+    unless rangeEnd?
+      throw new Error "Called getTextQuoteSelector(range) on a range with no valid end."
+    endOffset = (@domMapper.getInfoForNode rangeEnd).end
 
     quote = @domMapper.getContentForCharRange startOffset, endOffset
     [prefix, suffix] = @domMapper.getContextForCharRange startOffset, endOffset
@@ -278,6 +295,10 @@ class Annotator extends Delegator
   #
   # Returns Array of NormalizedRange instances.
   getSelectedTargets: ->
+    unless @domMapper?
+      throw new Error "Can not execute getSelectedTargets() before _setupMatching()!"
+    unless @wrapper
+      throw new Error "Can not execute getSelectedTargets() before @wrapper is configured!"
     selection = util.getGlobal().getSelection()
     source = this.getHref()
 
@@ -507,6 +528,8 @@ class Annotator extends Delegator
   #
   # Returns a normalized range if succeeded, null otherwise
   findAnchor: (target) ->
+    unless target?
+      throw new Error "Trying to find anchor for null target!"
     console.log "Trying to find anchor for target: "
     console.log target
 
@@ -553,21 +576,23 @@ class Annotator extends Delegator
   setupAnnotation: (annotation) ->
     root = @wrapper[0]
     annotation.target or= @selectedTargets
+    unless annotation.target?
+      throw new Error "Can not run setupAnnotation(), since @selectedTargets is null!"
 
     unless annotation.target instanceof Array
       annotation.target = [annotation.target]
 
-    normedRanges = []
+    normedRanges     = []
+    annotation.quote = []
+
     for t in annotation.target
       try
         anchor = this.findAnchor t
-        if anchor?.quote?
-          # We have found a changed quote.
-          # Save it for this target (currently not used)
-          t.quote = anchor.quote
-          t.diffHTML = anchor.diffHTML
+        t.quote = anchor.quote
+        t.diffHTML = anchor.diffHTML
         if anchor?.range?
           normedRanges.push anchor.range
+          annotation.quote.push t.quote
         else
           console.log "Could not find anchor target for annotation '" +
               annotation.id + "'."
@@ -576,20 +601,16 @@ class Annotator extends Delegator
         console.log exception.message
         console.log exception
 
-# TODO for resurrecting Annotator
-#    annotation.currentQuote      = []
-#    annotation.currentRanges     = []
+
+    annotation.ranges     = []
     annotation.highlights = []
 
     for normed in normedRanges
-# TODO for resurrecting Annotator
-#      annotation.currentQuote.push      $.trim(normed.text())
-#      annotation.currentRanges.push     normed.serialize(@wrapper[0], '.annotator-hl')
+      annotation.ranges.push normed.serialize(@wrapper[0], '.annotator-hl')
       $.merge annotation.highlights, this.highlightRange(normed)
 
     # Join all the quotes into one string.
-# TODO for resurrecting Annotator#
-#    annotation.currentQuote = annotation.currentQuote.join(' / ')
+    annotation.quote = annotation.quote.join(' / ')
 
     # Save the annotation data on each highlighter element.
     $(annotation.highlights).data('annotation', annotation)
