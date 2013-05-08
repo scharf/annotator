@@ -96,10 +96,18 @@ class Annotator extends Delegator
     return this unless Annotator.supported()
     this._setupDocumentEvents() unless @options.readOnly
     this._setupWrapper()._setupViewer()._setupEditor()
-    this._setupDynamicStyle()
 
-    # Create adder
-    this.adder = $(this.html.adder).appendTo(@wrapper).hide()
+    setTimeout (=>
+      @log?.info "Gonna setup dynamic style"
+      this._setupDynamicStyle()
+
+      # Create adder
+      @log?.info "Gonna create adder"
+      this.adder = $(this.html.adder).appendTo(@wrapper).hide()
+      @log?.info "Created adder"
+    ), 10000
+    # TODO: Find a more sensible timeout value, or (preferably)
+    # execute this using a faster and/or non-blocking method
 
   _setupMatching: ->
     this.domMapper = new DomTextMapper()
