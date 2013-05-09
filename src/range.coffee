@@ -198,7 +198,7 @@ class Range.BrowserRange
     # Make sure the common ancestor is an element node.
     nr.commonAncestor = @commonAncestorContainer
     # elementNode nodeType == 1
-    while nr.commonAncestor.nodeType isnt Node.ELEMENT_NODE
+    while nr.commonAncestor.nodeType isnt 1
       nr.commonAncestor = nr.commonAncestor.parentNode
 
     if window.DomTextMapper? and changed
@@ -295,8 +295,7 @@ class Range.NormalizedRange
       for n in nodes
         offset += n.nodeValue.length
 
-      isImg = node.nodeType is Node.ELEMENT_NODE and
-          node.tagName.toLowerCase() is "img"
+      isImg = node.nodeType is 1 and node.tagName.toLowerCase() is "img"
 
       if isEnd and not isImg then [xpath, offset + node.nodeValue.length] else [xpath, offset]
 
