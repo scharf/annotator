@@ -6,11 +6,7 @@
 
     <script src="lib/vendor/jquery.js"></script>
     <script src="lib/vendor/json2.js"></script>
-    <script src="lib/vendor/diff_match_patch_uncompressed.js"></script>
 
-    <script src="lib/dom_text_mapper.js"></script>
-    <script src="lib/text_match_engines.js"></script>
-    <script src="lib/dom_text_matcher.js"></script>
     <script src="lib/extensions.js"></script>
     <script src="lib/console.js"></script>
     <script src="lib/class.js"></script>
@@ -103,12 +99,12 @@
 
         devAnnotator = new Annotator(elem)
           .addPlugin('Auth', {
-            tokenUrl: 'http://localhost:5001/api/token'
+            tokenUrl: 'http://localhost:5000/api/token'
           })
           .addPlugin('Unsupported')
           .addPlugin('AnnotateItPermissions')
           .addPlugin('Store', {
-            prefix: 'http://localhost:5000/',
+            prefix: 'http://localhost:5000/api',
             loadFromSearch: {
               uri: 'http://localhost/annotator/dev.html'
             },

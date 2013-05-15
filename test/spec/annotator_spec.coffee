@@ -1,10 +1,7 @@
 describe 'Annotator', ->
   annotator = null
 
-  beforeEach ->
-    annotator = new Annotator($('<div></div>')[0], {})
-    annotator._setupMatching()
-
+  beforeEach -> annotator = new Annotator($('<div></div>')[0], {})
   afterEach  -> $(document).unbind()
 
   describe "events", ->
@@ -263,53 +260,26 @@ describe 'Annotator', ->
 
       $fix.hide()
 
-  describe "getSelectedTargets", ->
+  describe "getSelectedRanges", ->
     mockGlobal = null
     mockSelection = null
     mockRange = null
     mockBrowserRange = null
-    mockSerializedRange = null
 
     beforeEach ->
-
-      headText  = document.createTextNode("My Heading")
-      paraText  = document.createTextNode("My paragraph")
-      paraText2 = document.createTextNode(" continues")
-
-      head = document.createElement('h1')
-      head.appendChild(headText)
-      para = document.createElement('p')
-      para.appendChild(paraText)
-      para.appendChild(paraText2)
-
-      root = document.createElement('div')
-      root.appendChild(head)
-      root.appendChild(para)
-
-      annotator.domMapper.setRootNode root
-      annotator._scan()
-
       mockBrowserRange = {
         cloneRange: jasmine.createSpy('Range#cloneRange()')
       }
       mockBrowserRange.cloneRange.andReturn(mockBrowserRange)
-
-      mockSerializedRange = {
-        normalize: jasmine.createSpy('BrowserRange#normalize()')
-      }
 
       # This mock pretends to be both NomalizedRange and BrowserRange.
       mockRange = {
         limit: jasmine.createSpy('NormalizedRange#limit()')
         normalize: jasmine.createSpy('BrowserRange#normalize()')
         toRange: jasmine.createSpy('NormalizedRange#toRange()').andReturn('range')
-        serialize: jasmine.createSpy('NormalizedRange#serialize()').andReturn(mockSerializedRange)
-        start: paraText
-        end: paraText2
       }
       mockRange.limit.andReturn(mockRange)
       mockRange.normalize.andReturn(mockRange)
-      mockSerializedRange.normalize.andReturn(mockRange)
 
       # https://developer.mozilla.org/en/nsISelection
       mockSelection = {
@@ -324,17 +294,13 @@ describe 'Annotator', ->
       spyOn(util, 'getGlobal').andReturn(mockGlobal)
       spyOn(Range, 'BrowserRange').andReturn(mockRange)
 
-    it "should retrieve the global object and call getSelection() and serialize() 1", ->
-      annotator.getSelectedTargets()
+    it "should retrieve the global object and call getSelection()", ->
+      annotator.getSelectedRanges()
       expect(mockGlobal.getSelection).toHaveBeenCalled()
-      expect(mockRange.serialize).toHaveBeenCalled()
 
-    it "should retrieve the global object and call getSelection() and serialize() 2", ->
-      targets = annotator.getSelectedTargets()
-      firstTarget = targets[0]
-      selector = this.findSelector firstTarget.selector, "RangeSelector"
-      range = (Range.sniff selector).normalize()
-      expect(range).toEqual([mockRange])
+    it "should retrieve the global object and call getSelection()", ->
+      ranges = annotator.getSelectedRanges()
+      expect(ranges).toEqual([mockRange])
 
     it "should remove any failed calls to NormalizedRange#limit(), but re-add them to the global selection", ->
       mockRange.limit.andReturn(null)

@@ -36,9 +36,9 @@ describe 'Range', ->
   describe "SerializedRange", ->
     beforeEach ->
       r = new Range.SerializedRange
-        startContainer: "/p/strong"
+        start: "/p/strong"
         startOffset: 13
-        endContainer: "/p/strong"
+        end: "/p/strong"
         endOffset: 27
 
     describe "normalize", ->
@@ -65,19 +65,19 @@ describe 'Range', ->
 
     it "serialize() returns a serialized range", ->
       seri = r.serialize(fix())
-      expect(seri.startContainer).toEqual("/p[1]/strong[1]")
+      expect(seri.start).toEqual("/p[1]/strong[1]")
       expect(seri.startOffset).toEqual(13)
-      expect(seri.endContainer).toEqual("/p[1]/strong[1]")
+      expect(seri.end).toEqual("/p[1]/strong[1]")
       expect(seri.endOffset).toEqual(27)
       expect(seri instanceof Range.SerializedRange).toBeTruthy()
 
     it "toObject() returns a simple object", ->
       obj = r.toObject()
-      expect(obj.startContainer).toEqual("/p/strong")
+      expect(obj.start).toEqual("/p/strong")
       expect(obj.startOffset).toEqual(13)
-      expect(obj.endContainer).toEqual("/p/strong")
+      expect(obj.end).toEqual("/p/strong")
       expect(obj.endOffset).toEqual(27)
-      expect(JSON.stringify(obj)).toEqual('{"startContainer":"/p/strong","startOffset":13,"endContainer":"/p/strong","endOffset":27}')
+      expect(JSON.stringify(obj)).toEqual('{"start":"/p/strong","startOffset":13,"end":"/p/strong","endOffset":27}')
 
   describe "BrowserRange", ->
     beforeEach ->
@@ -86,7 +86,7 @@ describe 'Range', ->
 
     it "normalize() returns a normalized range", ->
       norm = r.normalize()
-      expect(norm.startContainer).toBe(norm.endContainer)
+      expect(norm.start).toBe(norm.end)
       expect(textInNormedRange(norm)).toEqual('habitant morbi')
 
     testBrowserRange = (i) ->
