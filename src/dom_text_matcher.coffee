@@ -27,18 +27,41 @@ class window.DomTextMatcher
   # This means that subsequent calls can not safely re-use previously cached
   # data structures, so some calculations will be necessary again.
   #
-  # The usage of this feature is not mandatorry; if not receiving change
+  # The usage of this feature is not mandatory; if not receiving change
   # notifications, the library will just assume that the document can change
   # anythime, and therefore will not assume any stability.
   documentChanged: -> @mapper.documentChanged()
 
-  # The available paths which can be searched
+  # Scan the document, so that it can be searched - Async version
   #
-  # An map is returned, where the keys are the paths, and the values hold
+  # A map is returned, where the keys are the paths, and the values hold
   # the collected informatino about the given sub-trees of the DOM.
-  scan: ->
+  scanAsync: (onProgress, onFinished) ->
+    unless onFinished?
+      throw new Error "Called scan() with no onFinished argument!"
     t0 = @timestamp()
-    data = @mapper.scan()
+    @mapper.scanAsync onProgress, (data) =>
+      t1 = @timestamp()
+      onFinished time: t1 - t0, data: data
+    null
+
+  # Scan the document, so that it can be searched - Deferred promise version
+  # You can use this as a wrapper around scanAsync,
+  # if you want a JQuery deferred promise.
+  scanPromise: ->
+    dfd = new jQuery.Deferred()
+    onProgress = (data) => dfd.notify data
+    onFinished = (data) => dfd.resolve data
+    @scanAsync onProgress, onFinished
+    return dfd.promise()
+
+  # Scan the document, so that it can be searched - Sync version
+  #
+  # A map is returned, where the keys are the paths, and the values hold
+  # the collected informatino about the given sub-trees of the DOM.
+  scanSync: ->
+    t0 = @timestamp()
+    data = @mapper.scanSync()
     t1 = @timestamp()
     return time: t1 - t0, data: data
 

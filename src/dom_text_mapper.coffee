@@ -4,6 +4,7 @@ class window.DomTextMapper
   USE_EMPTY_TEXT_WORKAROUND = true
   SELECT_CHILDREN_INSTEAD = ["thead", "tbody", "ol", "a", "caption", "p"]
   CONTEXT_LEN = 32
+  SCAN_JOB_LENGTH_MS = 100
 
   @instances: []
 
@@ -12,7 +13,7 @@ class window.DomTextMapper
 #    dm = @instances[0]
 #    console.log "Node @ " + (dm.getPathTo node) + " has changed: " + reason
     for instance in @instances
-      instance.performUpdateOnNode node
+      instance.performSyncUpdateOnNode node
     null
 
   constructor: ->
@@ -69,7 +70,7 @@ class window.DomTextMapper
     @lastDOMChange = @timestamp()
 #    console.log "Registered document change."
 
-  # Scan the document
+  # Scan the document - Sync version
   #
   # Traverses the DOM, collects various information, and
   # creates mappings between the string indices
@@ -81,7 +82,7 @@ class window.DomTextMapper
   #   node: reference to the DOM node
   #   content: the text content of the node, as rendered by the browser
   #   length: the length of the next content
-  scan: ->
+  scanSync: ->
     if @domStableSince @lastScanned
       # We have a valid paths structure!
 #      console.log "We have a valid DOM structure cache."
@@ -89,25 +90,68 @@ class window.DomTextMapper
 
 #    console.log "No valid cache, will have to do a scan."
     startTime = @timestamp()
-    @saveSelection()
     @path = {}
-    @traverseSubTree @pathStartNode, @getDefaultPath()
-    t1 = @timestamp()
-#    console.log "Phase I (Path traversal) took " + (t1 - startTime) + " ms."
-
-    path = @getPathTo @pathStartNode
-    node = @path[path].node
-    @collectPositions node, path, null, 0, 0
+    pathStart = @getDefaultPath()
+    task = node: @pathStartNode, path: pathStart
+    @saveSelection()
+    @finishTraverseSync task
     @restoreSelection()
+    t1 = @timestamp()
+    console.log "Phase I (Path traversal) took " + (t1 - startTime) + " ms."
+
+    node = @path[pathStart].node
+    @collectPositions node, pathStart, null, 0, 0
     @lastScanned = @timestamp()
-    @corpus = @path[path].content
+    @corpus = @path[pathStart].content
 #    console.log "Corpus is: " + @corpus
 
     t2 = @timestamp()    
-#    console.log "Phase II (offset calculation) took " + (t2 - t1) + " ms."
+    console.log "Phase II (offset calculation) took " + (t2 - t1) + " ms."
 
     @path
- 
+
+    null
+
+  # Scan the document - sync version
+  #
+  # Traverses the DOM, collects various information, and
+  # creates mappings between the string indices
+  # (as appearing in the rendered text) and the DOM elements.  
+  # 
+  # An map is returned, where the keys are the paths, and the
+  # values are objects with info about those parts of the DOM.
+  #   path: the valid path value
+  #   node: reference to the DOM node
+  #   content: the text content of the node, as rendered by the browser
+  #   length: the length of the next content
+  scanAsync: (onProgress, onFinished) ->
+    if @domStableSince @lastScanned
+      # We have a valid paths structure!
+#      console.log "We have a valid DOM structure cache."
+      onFinished @path
+
+#    console.log "No valid cache, will have to do a scan."
+#    startTime = @timestamp()
+    @path = {}
+    pathStart = @getDefaultPath()
+    task = node: @pathStartNode, path: pathStart
+    @finishTraverseAsync task, onProgress, =>
+#      t1 = @timestamp()
+#      console.log "Phase I (Path traversal) took " + (t1 - startTime) + " ms."
+
+      node = @path[pathStart].node
+      @collectPositions node, pathStart, null, 0, 0
+      @lastScanned = @timestamp()
+      @corpus = @path[pathStart].content
+#      console.log "Corpus is: " + @corpus
+
+#      t2 = @timestamp()    
+#      console.log "Phase II (offset calculation) took " + (t2 - t1) + " ms."
+
+      onFinished @path
+
+    null
+
   # Select the given path (for visual identification),
   # and optionally scroll to it
   selectPath: (path, scroll = false) ->
@@ -117,15 +161,18 @@ class window.DomTextMapper
     node or= @lookUpNode info.path
     @selectNode node, scroll
  
-  performUpdateOnNode: (node, escalating = false) ->
-    unless node? then throw new Error "Called performUpdate with a null node!"
+  performSyncUpdateOnNode: (node, escalating = false) ->
+    unless node?
+      throw new Error "Called performSyncUpdateOnOde with a null node!"
     unless @path? then return #We don't have data yet. Not updating.
     startTime = @timestamp()
     unless escalating then @saveSelection()
     path = @getPathTo node
     pathInfo = @path[path]
     unless pathInfo?
-      @performUpdateOnNode node.parentNode, true
+      # This node seems to be have changed.
+      # Scan the parten instead.
+      @performSyncUpdateOnNode node.parentNode, true
       unless escalating then @restoreSelection()        
       return
 #    console.log "Performing update on node @ path " + path
@@ -144,9 +191,11 @@ class window.DomTextMapper
         pathsToDrop.push p
       for p in pathsToDrop
         delete @path[p]        
-        
+
+      task = path:path, node: node
+      @finishTraverseSync task
+
 #      console.log "Done. Collecting new path info..."
-      @traverseSubTree node, path
 
 #      console.log "Done. Updating mappings..."
 
@@ -158,7 +207,7 @@ class window.DomTextMapper
         parentPathInfo = @path[parentPath]
         unless parentPathInfo?
           throw new Error "While performing update on node " + path +
-              ", no path info found for parent path: " + parentPath
+             ", no path info found for parent path: " + parentPath
         oldIndex = if node is node.parentNode.firstChild
           0
         else
@@ -179,7 +228,7 @@ class window.DomTextMapper
           parentPath = @parentPath path
 #          console.log "Node has no parent, will look up " + parentPath
           @lookUpNode parentPath
-        @performUpdateOnNode parentNode, true
+        @performSyncUpdateOnNode parentNode, true
       else
         throw new Error "Can not keep up with the changes,
  since even the node configured as path start node was replaced."
@@ -247,7 +296,10 @@ class window.DomTextMapper
     unless (start? and end?)
       throw new Error "start and end is required!"
 #    console.log "Collecting nodes for [" + start + ":" + end + "]"
-    @scan()
+
+#    @scan()
+    unless @domStableSince @lastScanned
+      throw new Error "Can not get mappings, since the dom has changed since last scanned. Call scan first."
 
     # Collect the matching path infos
 #    console.log "Collecting mappings"
@@ -395,17 +447,23 @@ class window.DomTextMapper
     xpath = xpath.replace /\/$/, ''
     xpath
 
-  # This method is called recursively, to traverse a given sub-tree of the DOM.
-  traverseSubTree: (node, path, invisible = false, verbose = false) ->
+  # Execute a DOM node traverse task. This involves collecting onformation
+  # about a node, and generating further tasks for it's child nodes.
+  executeTraverseTask: (task) ->
+    node = task.node
+    @underTraverse = path = task.path
+    invisiable = task.invisible ? false
+    verbose  = task.verbose ? false
+#    console.log "Executing traverse task for path " + path
+
     # Step one: get rendered node content, and store path info,
     # if there is valuable content
-    @underTraverse = path
     cont = @getNodeContent node, false
     @path[path] =
       path: path
       content: cont
       length: cont.length
-      node : node
+      node: node
     if cont.length
       if verbose then console.log "Collected info about path " + path
       if invisible
@@ -421,11 +479,85 @@ class window.DomTextMapper
     # Q: should we check children even if
     # the given node had no rendered content?
     # A: I seem to remember that the answer is yes, but I don't remember why.
+
     if node.hasChildNodes()
       for child in node.childNodes
-        subpath = path + '/' + (@getPathSegment child)
-        @traverseSubTree child, subpath, invisible, verbose
+        @traverseTasks.push
+          node: child
+          path: path + '/' + (@getPathSegment child) 
+          invisible: invisible
+          verbose: verbose
     null
+
+
+  # Run a round of DOM traverse tasks, and schedule the next one
+  runTraverseRounds: ->
+    try
+      @saveSelection()
+      roundStart = @timestamp()
+      tasksDone = 0
+      while @traverseTasks.length and (@timestamp() - roundStart < SCAN_JOB_LENGTH_MS)
+#        console.log "Queue length is: " + @traverseTasks.length
+        task = @traverseTasks.pop()
+        @executeTraverseTask task
+        tasksDone += 1
+        # for leaf nodes,        
+        unless task.node.hasChildNodes()
+          # count the chars we have covered
+          @traverseCoveredChars += @path[task.path].length
+
+#        console.log "Round covered " + tasksDone + " tasks " +
+#          "in " + (@timestamp() - roundStart) + " ms." +
+#          " Covered chars: " + done
+
+      @restoreSelection()
+      if @traverseOnProgress?
+        progress = @traverseCoveredChars / @traverseTotalLength        
+        @traverseOnProgress progress
+
+      # Is there still more work to do?
+      if @traverseTasks.length
+        # OK, scheduling next round
+        window.setTimeout => @runTraverseRounds()
+      else
+        # We are ready!
+        @traverseOnFinished()
+     catch exception
+      console.log "OOps. Internal error:"
+      console.log exception
+      console.log exception.stack
+        
+  # Execute an full DOM traverse compaign,
+  # starting with the given task.
+  finishTraverseSync: (rootTask) ->
+    if @traverseTasks? and @traverseTasks.size
+      throw new Error "Error: a DOM traverse is already in progress!"
+    @traverseTasks = []
+    @executeTraverseTask rootTask
+
+    @traverseTotalLength = @path[rootTask.path].length
+    @traverseCoveredChars = 0
+
+    while @traverseTasks.length
+      @executeTraverseTask @traverseTasks.pop()
+
+  # Execute an full DOM traverse compaign,
+  # starting with the given task.
+  finishTraverseAsync: (rootTask, onProgress, onFinished) ->
+    if @traverseTasks? and @traverseTasks.size
+      throw new Error "Error: a DOM traverse is already in progress!"
+    @traverseTasks = []
+    @saveSelection()
+    @executeTraverseTask rootTask
+    @restoreSelection()
+    @traverseTotalLength = @path[rootTask.path].length
+    @traverseOnProgress = onProgress
+    @traverseCoveredChars = 0
+    @traverseOnFinished = onFinished
+
+    # Schedule first round
+    window.setTimeout => @runTraverseRounds()
+
 
   getBody: -> (@rootWin.document.getElementsByTagName "body")[0]
 
