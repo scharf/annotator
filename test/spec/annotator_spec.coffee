@@ -437,9 +437,6 @@ describe 'Annotator', ->
       annotator.deleteAnnotation(annotation)
       expect(div.html()).toBe('<em>Hats</em><em>Gloves</em>')
 
-    it "should not choke when there are no highlights", ->
-      expect(-> annotator.deleteAnnotation({})).not.toThrow(Error)
-
     it "should publish the 'annotationDeleted' event", ->
       spyOn(annotator, 'publish')
       annotator.deleteAnnotation(annotation)
@@ -573,7 +570,6 @@ describe 'Annotator', ->
   describe "showEditor", ->
     beforeEach ->
       spyOn(annotator, 'publish')
-      spyOn(annotator, 'deleteAnnotation')
       spyOn(annotator.editor, 'load')
       spyOn(annotator.editor.element, 'css')
 
@@ -839,7 +835,6 @@ describe 'Annotator', ->
       spyOn(annotator.adder, 'position').andReturn(mockOffset)
       spyOn(annotator, 'createAnnotation').andReturn(annotation)
       spyOn(annotator, 'setupAnnotation').andCallThrough()
-      spyOn(annotator, 'deleteAnnotation').andCallThrough()
       spyOn(annotator, 'showEditor')
       spyOn(Range, 'sniff').andReturn(sniffedRange)
       spyOn(annotator, 'highlightRange').andReturn(element)
@@ -872,11 +867,10 @@ describe 'Annotator', ->
       annotator.onEditorSubmit(annotation)
       expect(mockSubscriber).toHaveBeenCalledWith(annotation)
 
-    it "should call Annotator#deleteAnnotation if editing is cancelled", ->
+    it "should suppress the 'annotationCreated' event if editing is cancelled", ->
       do annotator.onEditorHide
       do annotator.onEditorSubmit
       expect(mockSubscriber).not.toHaveBeenCalledWith('annotationCreated')
-      expect(annotator.deleteAnnotation).toHaveBeenCalledWith(annotation)
 
   describe "onEditAnnotation", ->
     annotation = null
