@@ -135,7 +135,14 @@ class Annotator extends Delegator
     result = new jQuery.Deferred()
     result.start = => setTimeout =>    
 #      console.log "Starting task '" + name + "'..."
+      result.startTime = new Date().getTime()
       todo result
+
+    result.ready = (data) =>
+      endTime = new Date().getTime()
+      elapsedTime = endTime - result.startTime
+      console.log "Finished task '" + name + "' in " + elapsedTime + "ms."
+      result.resolve data
 
     result
 
@@ -147,36 +154,36 @@ class Annotator extends Delegator
     @_initMatching = this.createTask "setup matching", (task) =>
       # Initiate the components responsible for search        
       this._setupMatching() unless @options.noMatching
-      task.resolve()
+      task.ready()
 
     @_initUIElements = this.createTask "setup wrapper, viewer, editor", (task) =>
       # Initialize various UI elements
       this._setupWrapper()._setupViewer()._setupEditor()
-      task.resolve()
+      task.ready()
 
     @_scan = this.createTask "scan document", (task) =>
       # Perform initial DOM scan, unless told not to.
       if @options.noScan or @options.noMatching
-        task.resolve()
+        task.ready()
       else
         s = this._scanAsync()
         s.progress (data) => console.log "Scan progress: " + data
-        s.done task.resolve
+        s.done task.ready
 
     @_initStyle = this.createTask "setup dynamic CSS styles", (task) =>
       # Set up CSS styles
       this._setupDynamicStyle()
-      task.resolve()
+      task.ready()
 
     @_initAdder = this.createTask "create adder", (task) =>
       # Create adder
       this.adder = $(this.html.adder).appendTo(@wrapper).hide()
-      task.resolve()
+      task.ready()
 
     @_initEvents = this.createTask "setup document events", (task) =>
       # When everything is ready, enable annotating
       this._setupDocumentEvents() unless @options.readOnly
-      task.resolve()
+      task.ready()
 
     @_initMatching.start()
     @_initStyle.start()
