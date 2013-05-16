@@ -131,56 +131,52 @@ class Annotator extends Delegator
 
     null
 
+  createTask: (name, todo) ->
+    result = new jQuery.Deferred()
+    result.start = => setTimeout =>    
+#      console.log "Starting task '" + name + "'..."
+      todo result
+
+    result
+
   defineAsyncInitTasks: ->
 
     @_init = new jQuery.Deferred()
     @init = @_init.promise()
 
-    @_initMatching = new jQuery.Deferred()
-    @_initMatching.start = => setTimeout =>
-      # Initiate the components responsible for search
-#      console.log "Calling _setupmatching() ..."
+    @_initMatching = this.createTask "setup matching", (task) =>
+      # Initiate the components responsible for search        
       this._setupMatching() unless @options.noMatching
-      @_initMatching.resolve()
+      task.resolve()
 
-    @_initUIElements = new jQuery.Deferred()
-    @_initUIElements.start = => setTimeout =>
+    @_initUIElements = this.createTask "setup wrapper, viewer, editor", (task) =>
       # Initialize various UI elements
-#      console.log "Calling _setupWrapper() and friends..."
       this._setupWrapper()._setupViewer()._setupEditor()
-      @_initUIElements.resolve()
+      task.resolve()
 
-    @_scan = new jQuery.Deferred()
-    @_scan.start = => setTimeout =>
+    @_scan = this.createTask "scan document", (task) =>
       # Perform initial DOM scan, unless told not to.
-#      console.log "Going to run scanning..."
       if @options.noScan or @options.noMatching
-        @_scan.resolve()
+        task.resolve()
       else
         s = this._scanAsync()
         s.progress (data) => console.log "Scan progress: " + data
-        s.done @_scan.resolve
+        s.done task.resolve
 
-    @_initStyle = new jQuery.Deferred()
-    @_initStyle.start = => setTimeout =>
+    @_initStyle = this.createTask "setup dynamic CSS styles", (task) =>
       # Set up CSS styles
-#      console.log "Calling _setupDynamicStyle()..."
       this._setupDynamicStyle()
-      @_initStyle.resolve()
+      task.resolve()
 
-    @_initAdder = new jQuery.Deferred()
-    @_initAdder.start = => setTimeout =>
+    @_initAdder = this.createTask "create adder", (task) =>
       # Create adder
-#      console.log "Creating adder..."
       this.adder = $(this.html.adder).appendTo(@wrapper).hide()
-      @_initAdder.resolve()
+      task.resolve()
 
-    @_initEvents = new jQuery.Deferred()
-    @_initEvents.start = => setTimeout =>
+    @_initEvents = this.createTask "setup document events", (task) =>
       # When everything is ready, enable annotating
-#      console.log "Calling _setupDocumentEvents()..."
       this._setupDocumentEvents() unless @options.readOnly
-      @_initEvents.resolve()
+      task.resolve()
 
     @_initMatching.start()
     @_initStyle.start()
