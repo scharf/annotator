@@ -94,16 +94,104 @@ class Annotator extends Delegator
 
     # Return early if the annotator is not supported.
     return this unless Annotator.supported()
-    this._setupDocumentEvents() unless @options.readOnly
+
+    unless @options.noInit
+      if @options.asyncInit
+        this.initAsync()
+      else
+        this.initSync()
+
+    null
+        
+  initSync: ->
+#    console.log "Doing sync init."
+
+    @_init = new jQuery.Deferred()
+    @init = @_init.promise()
+
+    # Initiate the components responsible for search
     this._setupMatching() unless @options.noMatching
+
+    # Initialize various UI elements
     this._setupWrapper()._setupViewer()._setupEditor()
-    this._setupDynamicStyle()
 
     # Perform initial DOM scan, unless told not to.
     this._scanSync() unless (@options.noScan or @options.noMatching)
 
+    # Set up CSS styles
+    this._setupDynamicStyle()
+
     # Create adder
     this.adder = $(this.html.adder).appendTo(@wrapper).hide()
+
+    # When everything is ready, enable annotating
+    this._setupDocumentEvents() unless @options.readOnly
+
+    @_init.resolve()
+
+    null
+
+  initAsync: ->
+#    console.log "Doing async init."
+
+    @_init = new jQuery.Deferred()
+    @init = @_init.promise()
+
+    @_initMatching = new jQuery.Deferred()
+    @_initMatching.start = => setTimeout =>
+      # Initiate the components responsible for search
+#      console.log "Calling _setupmatching() ..."
+      this._setupMatching() unless @options.noMatching
+      @_initMatching.resolve()
+
+    @_initUIElements = new jQuery.Deferred()
+    @_initUIElements.start = => setTimeout =>
+      # Initialize various UI elements
+#      console.log "Calling _setupWrapper() and friends..."
+      this._setupWrapper()._setupViewer()._setupEditor()
+      @_initUIElements.resolve()
+
+    @_scan = new jQuery.Deferred()
+    @_scan.start = => setTimeout =>
+      # Perform initial DOM scan, unless told not to.
+#      console.log "Going to run scanning..."
+      if @options.noScan or @options.noMatching
+        @_scan.resolve()
+      else
+        s = this._scanAsync()
+        s.done @_scan.resolve
+
+    @_initStyle = new jQuery.Deferred()
+    @_initStyle.start = => setTimeout =>
+      # Set up CSS styles
+#      console.log "Calling _setupDynamicStyle()..."
+      this._setupDynamicStyle()
+      @_initStyle.resolve()
+
+    @_initAdder = new jQuery.Deferred()
+    @_initAdder.start = => setTimeout =>
+      # Create adder
+#      console.log "Creating adder..."
+      this.adder = $(this.html.adder).appendTo(@wrapper).hide()
+      @_initAdder.resolve()
+
+    @_initEvents = new jQuery.Deferred()
+    @_initEvents.start = => setTimeout =>
+      # When everything is ready, enable annotating
+#      console.log "Calling _setupDocumentEvents()..."
+      this._setupDocumentEvents() unless @options.readOnly
+      @_initEvents.resolve()
+
+    @_initMatching.start()
+    @_initStyle.start()
+
+    $.when(@_initMatching).done @_initUIElements.start
+    $.when(@_initMatching, @_initUIElements).done @_scan.start
+    $.when(@_initUIElements, @_scan).done @_initAdder.start
+    $.when(@_initMatching, @_initUIElements, @_scan, @_initStyle, @_initAdder).done @_initEvents.start
+    $.when(@_initEvents).done =>
+#      console.log "Async init finished."
+      @_init.resolve()
 
   # Initializes the components used for analyzing the DOM
   _setupMatching: ->
@@ -113,9 +201,13 @@ class Annotator extends Delegator
 
     this
 
-  # Perform a scan of the DOM. Required for finding anchors.
+  # Perform a sync scan of the DOM. Required for finding anchors.
   _scanSync: ->
-    @domMatcher.scanSync()   
+    @domMatcher.scanSync()
+
+  # Perform an async scan of the DOM. Required for finding anchors.
+  _scanAsync: ->
+    @domMatcher.scanPromise()
  
   # Wraps the children of @element in a @wrapper div. NOTE: This method will also
   # remove any script elements inside @element to prevent them re-executing.
@@ -131,7 +223,7 @@ class Annotator extends Delegator
     @element.find('script').remove()
     @element.wrapInner(@wrapper)
     @wrapper = @element.find('.annotator-wrapper')
-    @domMapper.setRootNode @wrapper[0]
+    @domMapper?.setRootNode @wrapper[0]
 
     this
 
