@@ -131,8 +131,7 @@ class Annotator extends Delegator
 
     null
 
-  initAsync: ->
-#    console.log "Doing async init."
+  defineAsyncInitTasks: ->
 
     @_init = new jQuery.Deferred()
     @init = @_init.promise()
@@ -186,6 +185,8 @@ class Annotator extends Delegator
     @_initMatching.start()
     @_initStyle.start()
 
+  executeAsyncInitTasks: ->
+
     $.when(@_initMatching).done @_initUIElements.start
     $.when(@_initMatching, @_initUIElements).done @_scan.start
     $.when(@_initUIElements, @_scan).done @_initAdder.start
@@ -193,6 +194,11 @@ class Annotator extends Delegator
     $.when(@_initEvents).done =>
 #      console.log "Async init finished."
       @_init.resolve()
+
+  initAsync: ->
+    console.log "Doing async init."
+    this.defineAsyncInitTasks()
+    this.executeAsyncInitTasks()
 
   # Initializes the components used for analyzing the DOM
   _setupMatching: ->
