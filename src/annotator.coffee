@@ -110,19 +110,22 @@ class Annotator extends Delegator
     @init = @_init.promise()
 
     # Initiate the components responsible for search
-    this._setupMatching() unless @options.noMatching
-
-    # Initialize various UI elements
-    this._setupWrapper()._setupViewer()._setupEditor()
-
-    # Perform initial DOM scan, unless told not to.
-    this._scanSync() unless (@options.noScan or @options.noMatching)
+    this._setupDTM() unless @options.noMatching
 
     # Set up CSS styles
     this._setupDynamicStyle()
 
+    # Initialize various UI elements
+    this._setupViewer()._setupEditor()
+
+    # Initialize wrapper
+    this._setupWrapper()
+
     # Create adder
     this.adder = $(this.html.adder).appendTo(@wrapper).hide()
+
+    # Perform initial DOM scan, unless told not to.
+    this._scanSync() unless (@options.noScan or @options.noMatching)
 
     # When everything is ready, enable annotating
     this._setupDocumentEvents() unless @options.readOnly
@@ -131,71 +134,75 @@ class Annotator extends Delegator
 
     null
 
-  createTask: (name, todo) ->
-    result = new jQuery.Deferred()
-    result.start = => setTimeout =>    
-#      console.log "Starting task '" + name + "'..."
-      result.startTime = new Date().getTime()
-      todo result
-
-    result.ready = (data) =>
-      endTime = new Date().getTime()
-      elapsedTime = endTime - result.startTime
-      console.log "Finished task '" + name + "' in " + elapsedTime + "ms."
-      result.resolve data
-
-    result
-
   defineAsyncInitTasks: ->
 
     @_init = new jQuery.Deferred()
     @init = @_init.promise()
 
-    @_initMatching = this.createTask "setup matching", (task) =>
-      # Initiate the components responsible for search        
-      this._setupMatching() unless @options.noMatching
+    @_initDTM = new Task "setup d-t-m", (task) =>
+      this._setupDTM() unless @options.noMatching
       task.ready()
 
-    @_initUIElements = this.createTask "setup wrapper, viewer, editor", (task) =>
-      # Initialize various UI elements
-      this._setupWrapper()._setupViewer()._setupEditor()
+    @_initWrapper = new Task "setup wrapper", (task) =>
+      this._setupWrapper()
       task.ready()
 
-    @_scan = this.createTask "scan document", (task) =>
-      # Perform initial DOM scan, unless told not to.
+    @_initViewerEditor = new Task "setup viewer & editor", (task) =>
+      this._setupViewer()._setupEditor()
+      task.ready()
+
+    @_scanGen = new TaskGen "scan document", (task) =>
+      s = this._scanAsync()
+      s.progress (data) => console.log "Scan progress: " + data
+      s.done task.ready        
+
+    @_startScan = 
       if @options.noScan or @options.noMatching
-        task.ready()
+        # We were instructed to skip initial DOM scan        
+        new DummyTask "Skipping DOM scan"
       else
-        s = this._scanAsync()
-        s.progress (data) => console.log "Scan progress: " + data
-        s.done task.ready
+        @_scanGen.create "Initial scan"
 
-    @_initStyle = this.createTask "setup dynamic CSS styles", (task) =>
-      # Set up CSS styles
+    @_initStyle = new Task "setup dynamic CSS styles", (task) =>
       this._setupDynamicStyle()
       task.ready()
 
-    @_initAdder = this.createTask "create adder", (task) =>
-      # Create adder
+    @_initAdder = new Task "create adder", (task) =>
       this.adder = $(this.html.adder).appendTo(@wrapper).hide()
       task.ready()
 
-    @_initEvents = this.createTask "setup document events", (task) =>
-      # When everything is ready, enable annotating
+    @_initEvents = new Task "setup document events", (task) =>
+      # Enable annotating
       this._setupDocumentEvents() unless @options.readOnly
       task.ready()
 
-    @_initMatching.start()
-    @_initStyle.start()
-
   executeAsyncInitTasks: ->
 
-    $.when(@_initMatching).done @_initUIElements.start
-    $.when(@_initMatching, @_initUIElements).done @_scan.start
-    $.when(@_initUIElements, @_scan).done @_initAdder.start
-    $.when(@_initMatching, @_initUIElements, @_scan, @_initStyle, @_initAdder).done @_initEvents.start
+    # This is fundamental.
+    @_initDTM.start()
+
+    # These are not so important, but don't depend on anything,
+    # so we can just launch them.
+    @_initStyle.start()
+    @_initViewerEditor.start()
+
+    # Since the wrapper is configured on d-t-m, too,
+    # initWrapper depends on initDTM.
+    $.when(@_initDTM).done @_initWrapper.start
+
+    # Adder is attached to the end of the wrapper,
+    # so it depends on initWrapper.
+    $.when(@_initWrapper).done @_initAdder.start
+
+    # Scanning requires a functional and configured d-t-m
+    $.when(@_initDTM, @_initWrapper).done @_startScan.start
+
+    # We want to listen to events only when everything is ready 
+    $.when(@_initDTM, @_Wrapper, @_initViewerEditor, @_startScan,
+       @_initStyle, @_initAdder).done @_initEvents.start
+
+    # When we started to listen to events, we are ready to go.
     $.when(@_initEvents).done =>
-#      console.log "Async init finished."
       @_init.resolve()
 
   initAsync: ->
@@ -204,7 +211,7 @@ class Annotator extends Delegator
     this.executeAsyncInitTasks()
 
   # Initializes the components used for analyzing the DOM
-  _setupMatching: ->
+  _setupDTM: ->
         
     @domMapper = new DomTextMapper()
     @domMatcher = new DomTextMatcher @domMapper
@@ -390,7 +397,7 @@ class Annotator extends Delegator
   # Returns Array of NormalizedRange instances.
   getSelectedTargets: ->
     unless @domMapper?
-      throw new Error "Can not execute getSelectedTargets() before _setupMatching()!"
+      throw new Error "Can not execute getSelectedTargets() before _setupDTM()!"
     unless @wrapper
       throw new Error "Can not execute getSelectedTargets() before @wrapper is configured!"
     selection = util.getGlobal().getSelection()

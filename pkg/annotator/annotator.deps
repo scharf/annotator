@@ -5,6 +5,7 @@ echo extensions
 echo console
 echo class
 echo range
+echo tasks
 echo annotator
 echo widget
 echo editor
