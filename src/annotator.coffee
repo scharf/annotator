@@ -159,6 +159,7 @@ class Annotator extends Delegator
         @_scan.resolve()
       else
         s = this._scanAsync()
+        s.progress (data) => console.log "Scan progress: " + data
         s.done @_scan.resolve
 
     @_initStyle = new jQuery.Deferred()
