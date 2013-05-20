@@ -135,25 +135,25 @@ class Annotator extends Delegator
     null
 
   defineAsyncInitTasks: ->
-
-    @_init = new jQuery.Deferred()
-    @init = @_init.promise()
-
-    @_initDTM = new Task "setup d-t-m", (task) =>
+        
+    @init = new Task "Booting Annotator", (task) =>
+      this.executeAsyncInitTasks task
+        
+    @_initDTM = @init.createSubTask 0.031, "setup d-t-m", (task) =>
       this._setupDTM() unless @options.noMatching
       task.ready()
 
-    @_initWrapper = new Task "setup wrapper", (task) =>
+    @_initWrapper = @init.createSubTask 0.062, "setup wrapper", (task) =>
       this._setupWrapper()
       task.ready()
 
-    @_initViewerEditor = new Task "setup viewer & editor", (task) =>
+    @_initViewerEditor = @init.createSubTask 0.113, "setup viewer & editor", (task) =>
       this._setupViewer()._setupEditor()
       task.ready()
 
     @_scanGen = new TaskGen "scan document", (task) =>
       s = this._scanAsync()
-      s.progress (data) => console.log "Scan progress: " + data
+      s.progress task.notify
       s.done task.ready        
 
     @_startScan = 
@@ -163,20 +163,22 @@ class Annotator extends Delegator
       else
         @_scanGen.create "Initial scan"
 
-    @_initStyle = new Task "setup dynamic CSS styles", (task) =>
+    @init.addSubTask 0.619, @_startScan 
+
+    @_initStyle = @init.createSubTask 0.093, "setup dynamic CSS styles", (task) =>
       this._setupDynamicStyle()
       task.ready()
 
-    @_initAdder = new Task "create adder", (task) =>
+    @_initAdder = @init.createSubTask 0.072, "create adder", (task) =>
       this.adder = $(this.html.adder).appendTo(@wrapper).hide()
       task.ready()
 
-    @_initEvents = new Task "setup document events", (task) =>
+    @_initEvents = @init.createSubTask 0.01, "setup document events", (task) =>
       # Enable annotating
       this._setupDocumentEvents() unless @options.readOnly
       task.ready()
 
-  executeAsyncInitTasks: ->
+  executeAsyncInitTasks: (task) ->
 
     # This is fundamental.
     @_initDTM.start()
@@ -202,13 +204,13 @@ class Annotator extends Delegator
        @_initStyle, @_initAdder).done @_initEvents.start
 
     # When we started to listen to events, we are ready to go.
-    $.when(@_initEvents).done =>
-      @_init.resolve()
+    $.when(@_initEvents).done => task.ready()
 
   initAsync: ->
-    console.log "Doing async init."
     this.defineAsyncInitTasks()
-    this.executeAsyncInitTasks()
+    @init.progress (info) =>
+      console.log info.taskName + ": " + info.progress + " - " + info.text
+    @init.start()
 
   # Initializes the components used for analyzing the DOM
   _setupDTM: ->
