@@ -112,6 +112,7 @@ class _CompositeTask extends _Task
  
     super info
     @subTasks = {}
+    @pendingSubTasks = 0
     @trigger = this.createSubTask
       weight: 0
       name: info.name + "__init"
@@ -132,6 +133,12 @@ class _CompositeTask extends _Task
       weight: weight
       progress: 0
       text: "no info about this subtask"
+    @pendingSubTasks += 1
+
+    task.done =>
+      @pendingSubTasks -= 1
+      unless @pendingSubTasks then @dfd.ready()
+        
     task.progress (info) =>
       task = info.task
       delete info.task

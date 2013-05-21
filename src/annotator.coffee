@@ -112,7 +112,7 @@ class Annotator extends Delegator
     @init = @_init.promise()
 
     # Initiate the components responsible for search
-    this._setupDTM() unless @options.noMatching
+    this._setupDTM()
 
     # Set up CSS styles
     this._setupDynamicStyle()
@@ -127,7 +127,7 @@ class Annotator extends Delegator
     this.adder = $(this.html.adder).appendTo(@wrapper).hide()
 
     # Perform initial DOM scan, unless told not to.
-    this._scanSync() unless (@options.noScan or @options.noMatching)
+    this._scanSync() unless @options.noScan
 
     # When everything is ready, enable annotating
     this._setupDocumentEvents() unless @options.readOnly
@@ -144,7 +144,7 @@ class Annotator extends Delegator
       weight: 0.031
       name: "setup d-t-m"
       code: (task) =>
-        this._setupDTM() unless @options.noMatching
+        this._setupDTM()
         task.ready()
 
     @init.createSubTask
@@ -184,7 +184,7 @@ class Annotator extends Delegator
         s.progress task.notify
         s.done task.ready        
 
-    if @options.noScan or @options.noMatching
+    if @options.noScan
       # We were instructed to skip initial DOM scan        
       new DummyTask "start scan"
     else
@@ -397,8 +397,6 @@ class Annotator extends Delegator
   #
   # Returns Array of NormalizedRange instances.
   getSelectedTargets: ->
-    unless @domMapper?
-      throw new Error "Can not execute getSelectedTargets() before _setupDTM()!"
     unless @wrapper
       throw new Error "Can not execute getSelectedTargets() before @wrapper is configured!"
     selection = util.getGlobal().getSelection()
