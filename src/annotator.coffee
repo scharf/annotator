@@ -95,6 +95,8 @@ class Annotator extends Delegator
     # Return early if the annotator is not supported.
     return this unless Annotator.supported()
 
+    @tasks = new TaskManager "Annotator"
+
     unless @options.noInit
       if @options.asyncInit
         this.initAsync()
@@ -135,82 +137,79 @@ class Annotator extends Delegator
     null
 
   defineAsyncInitTasks: ->
-        
-    @init = new Task "Booting Annotator", (task) =>
-      this.executeAsyncInitTasks task
-        
-    @_initDTM = @init.createSubTask 0.031, "setup d-t-m", (task) =>
-      this._setupDTM() unless @options.noMatching
-      task.ready()
 
-    @_initWrapper = @init.createSubTask 0.062, "setup wrapper", (task) =>
-      this._setupWrapper()
-      task.ready()
+    @init = @tasks.createComposite name: "Booting Annotator"
 
-    @_initViewerEditor = @init.createSubTask 0.113, "setup viewer & editor", (task) =>
-      this._setupViewer()._setupEditor()
-      task.ready()
+    @init.createSubTask
+      weight: 0.031
+      name: "setup d-t-m"
+      code: (task) =>
+        this._setupDTM() unless @options.noMatching
+        task.ready()
 
-    @_scanGen = new TaskGen "scan document", (task) =>
-      s = this._scanAsync()
-      s.progress task.notify
-      s.done task.ready        
+    @init.createSubTask
+      weight: 0.093
+      name: "setup dynamic CSS styles"
+      code: (task) =>
+        this._setupDynamicStyle()
+        task.ready()
 
-    @_startScan = 
-      if @options.noScan or @options.noMatching
-        # We were instructed to skip initial DOM scan        
-        new DummyTask "Skipping DOM scan"
-      else
-        @_scanGen.create "Initial scan"
+    @init.createSubTask
+      weight: 0.062
+      name: "setup wrapper"
+      deps: ["setup d-t-m"] # The wrapper is configured on d-t-m
+      code: (task) =>
+        this._setupWrapper()
+        task.ready()
 
-    @init.addSubTask 0.619, @_startScan 
+    @init.createSubTask
+      weight: 0.072
+      name: "create adder"
+      deps: ["setup wrapper"] # Adder is attached to the end of the wrapper
+      code: (task) =>
+        this.adder = $(this.html.adder).appendTo(@wrapper).hide()
+        task.ready()        
 
-    @_initStyle = @init.createSubTask 0.093, "setup dynamic CSS styles", (task) =>
-      this._setupDynamicStyle()
-      task.ready()
+    @init.createSubTask
+      weight: 0.113
+      name: "setup viewer & editor"
+      code: (task) =>
+        this._setupViewer()._setupEditor()
+        task.ready()
 
-    @_initAdder = @init.createSubTask 0.072, "create adder", (task) =>
-      this.adder = $(this.html.adder).appendTo(@wrapper).hide()
-      task.ready()
+    @_scanGen = @tasks.createGenerator
+      name: "scan document"
+      code: (task) =>
+        s = this._scanAsync()
+        s.progress task.notify
+        s.done task.ready        
 
-    @_initEvents = @init.createSubTask 0.01, "setup document events", (task) =>
-      # Enable annotating
-      this._setupDocumentEvents() unless @options.readOnly
-      task.ready()
+    if @options.noScan or @options.noMatching
+      # We were instructed to skip initial DOM scan        
+      new DummyTask "start scan"
+    else
+      scan = @_scanGen.create
+        instanceName: "Initial scan"
+        # Scanning requires a functional and configured d-t-m        
+        deps: ["setup d-t-m", "setup wrapper"]
+      @init.addSubTask weight: 0.619, task: scan
 
-  executeAsyncInitTasks: (task) ->
-
-    # This is fundamental.
-    @_initDTM.start()
-
-    # These are not so important, but don't depend on anything,
-    # so we can just launch them.
-    @_initStyle.start()
-    @_initViewerEditor.start()
-
-    # Since the wrapper is configured on d-t-m, too,
-    # initWrapper depends on initDTM.
-    $.when(@_initDTM).done @_initWrapper.start
-
-    # Adder is attached to the end of the wrapper,
-    # so it depends on initWrapper.
-    $.when(@_initWrapper).done @_initAdder.start
-
-    # Scanning requires a functional and configured d-t-m
-    $.when(@_initDTM, @_initWrapper).done @_startScan.start
-
-    # We want to listen to events only when everything is ready 
-    $.when(@_initDTM, @_Wrapper, @_initViewerEditor, @_startScan,
-       @_initStyle, @_initAdder).done @_initEvents.start
-
-    # When we started to listen to events, we are ready to go.
-    $.when(@_initEvents).done => task.ready()
+    @init.createSubTask
+      weight: 0.01
+      name: "setup document events"
+      # We want to listen to events only when everything is ready 
+      deps: ["setup d-t-m", "setup wrapper", "setup viewer & editor",
+              scan, "setup dynamic CSS styles", "create adder"]
+      code: (task) =>
+        # Enable annotating
+        this._setupDocumentEvents() unless @options.readOnly
+        task.ready()
 
   initAsync: ->
     this.defineAsyncInitTasks()
     @init.progress (info) =>
       console.log info.taskName + ": " + info.progress + " - " + info.text
-    @init.start()
+    @tasks.schedule()
 
   # Initializes the components used for analyzing the DOM
   _setupDTM: ->

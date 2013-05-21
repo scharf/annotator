@@ -1,14 +1,25 @@
 
-class Task
-  constructor: (name, todo, data) ->
-    unless todo?
+class _Task
+  uniqueId: (length=8) ->
+    id = ""
+    id += Math.random().toString(36).substr(2) while id.length < length
+    id.substr 0, length
+        
+  constructor: (info) ->
+    unless info.manager?
+      throw new Error "Trying to create task with no manager!"
+    unless info.name?
+      throw new Error "Trying to create task with no name!"
+    unless info.code?
       throw new Error "Trying to define task with no code!"
-    @taskID = name # TODO
-    @_name = name
-    @_todo = todo
-    @_data = data
+    @manager = info.manager
+    @taskID = this.uniqueId()
+    @_name = info.name
+    @_todo = info.code
+    @_data = info.data
+    info.deps ?= []
+    this.setDeps info.deps
     @started = false
-    @subTasks = {}
     @dfd = new jQuery.Deferred()
 
     @dfd._notify = @dfd.notify
@@ -24,19 +35,99 @@ class Task
       @dfd.resolve data
     @dfd.promise this
 
+  setDeps: (deps) ->
+    unless Array.isArray deps then deps = [deps]        
+    @_deps = deps
+#    console.log "Deps now:"
+#    console.log @_deps
+        
+  addDeps: (toAdd) ->
+    unless Array.isArray toAdd then toAdd = [toAdd]
+    for dep in toAdd
+      @_deps.push dep
 
-  start: => setTimeout =>
+  removeDeps: (toRemove) ->
+    console.log "Should remove:"
+    console.log toRemove        
+    unless Array.isArray toRemove then toRemove = [toRemove]
+    @_deps = @_deps.filter (dep) -> dep not in toRemove
+#    console.log "Deps now:"
+#    console.log @_deps
+
+  resolveDeps: ->
+    @_depsResolved = ((if typeof dep is "string" then @manager.lookup dep else dep) for dep in @_deps)
+
+  _start: => 
     if @started
       console.log "This task ('" + @_name + "') has already been started!"
       return
-    @dfd.notify
-      progress: 0
-      text: "Starting"
-    @dfd.startTime = new Date().getTime()
-    @_todo @dfd, @_data
+    for dep in @_depsResolved
+      unless dep.isResolved()
+        console.log "What am I doing here? Out of the " +
+          @_depsResolved.length + " dependencies, '" + dep._name +
+          "' for the current task '" + @_name +
+          "' has not yet been resolved!"
+        return
 
-  addSubTask: (weight, task) =>
-    if task.taskID is 1 then throw new Error "WTF"
+    setTimeout =>
+      @dfd.notify
+        progress: 0
+        text: "Starting"
+      @dfd.startTime = new Date().getTime()
+      @_todo @dfd, @_data
+
+#class _DummyTask extends _Task
+#  constructor: (name) ->
+#    super "Dummy: " + name, (task) => task.ready()
+
+class _TaskGen
+  constructor: (info) ->
+    @manager = info.manager
+    @name = info.name
+    @todo = info.code
+    @count = 0
+
+  create: (info) ->
+    @count += 1
+    name =
+    @manager.create
+      name: @name + " #" + @count + ": " + info.instanceName
+      code: @todo
+      deps: info.deps
+      data: info.data  
+
+class _CompositeTask extends _Task
+  constructor: (info) ->
+
+    # Composite tasks are not supposed to have custom code.
+    if info.code?
+      throw new Error "You can not specify code for a CompositeTask!"
+
+    # Instead, what they do is to resolve the "trigger" sub-task,
+    # which is created automatically, and on which all other
+    # sub-tasks depend on. So, in effect, running the task
+    # allows to sub-tasks (that don't have other dependencies)
+    # to execute.
+    info.code = => @trigger.dfd.resolve() 
+ 
+    super info
+    @subTasks = {}
+    @trigger = this.createSubTask
+      weight: 0
+      name: info.name + "__init"
+      code: (task) ->
+        # A trigget does not need to do anything.
+        # Resolving the trigger task will trigger the rest of the tasks.
+
+
+  addSubTask: (info) ->
+    weight = info.weight
+    unless weight?
+      throw new Error "Trying to add subTask with no weight!"      
+    task = info.task
+    unless task?
+      throw new Error "Trying to add subTask with no task!"
+    if @trigger? then task.addDeps @trigger
     @subTasks[task.taskID] =
       weight: weight
       progress: 0
@@ -44,6 +135,7 @@ class Task
     task.progress (info) =>
       task = info.task
       delete info.task
+      return if task is @trigger
       taskInfo = @subTasks[task.taskID]
       $.extend taskInfo, info
 
@@ -58,22 +150,76 @@ class Task
 
       @dfd.notify report
 
-  createSubTask: (weight, name, todo, data) ->
-    task = new Task name, todo, data
-    this.addSubTask weight, task
+  createSubTask: (info) ->
+    w = info.weight
+    delete info.weight        
+    task = @manager.create info
+    this.addSubTask weight: w, task: task
     task
 
-class DummyTask extends Task
+class TaskManager
   constructor: (name) ->
-    super "Dummy: " + name, (task) => task.ready()
-
-class TaskGen
-  constructor: (name, todo) ->
     @name = name
-    @todo = todo
-    @count = 0
 
-  create: (name, data) ->
-    @count += 1
-    name = @name + " #" + @count + ": " + name
-    new Task name, @todo, data
+  tasks: {}
+
+  _checkName: (info) ->
+    name = info?.name
+    unless name?
+      console.log info
+      throw new Error "Trying to create a task without a name!"
+    if @tasks[name]?
+      console.log "Warning: overriding existing task '" + name +
+        "' with new definition!"
+    name
+
+  create: (info) ->
+    name = this._checkName info
+    $.extend info, manager: this
+    task = new _Task info
+    @tasks[name] = task
+    task
+
+  createGenerator: (info) ->
+    $.extend info, manager: this
+    new _TaskGen info
+
+  createComposite: (info) ->
+    name = this._checkName info        
+    $.extend info, manager: this
+    task = new _CompositeTask info
+    @tasks[name] = task
+    task
+
+  setDeps: (from, to) -> (@lookup from).setDeps to
+  addDeps: (from, to) -> (@lookup from).addDeps to
+  removeDeps: (from, to) -> (@lookup from).removeDeps to
+
+  removeAllDepsTo: (to) ->
+    console.log "a"      
+
+  lookup: (name) ->
+    result = @tasks[name]
+    unless result?
+      throw new Error "Looking up non-existant task '" + name + "'." +
+        " Known tasks are: " + @tasks.keys
+    result
+
+  schedule: () ->
+    for name, task of @tasks
+      try  
+        deps = task.resolveDeps()
+        dt = task
+        if deps.length is 0 then task._start()
+        else if deps.length is 1 then deps[0].done task._start 
+        else $.when.apply(null, deps).done task._start
+          
+      catch exception
+        console.log "E:"
+        console.log exception
+        console.log exception.stack
+        console.log "Could not resolve dependencies for task '" + name +
+           "', so not scheduling it."
+
+    null
+
