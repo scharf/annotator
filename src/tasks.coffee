@@ -76,10 +76,6 @@ class _Task
       @dfd.startTime = new Date().getTime()
       @_todo @dfd, @_data
 
-#class _DummyTask extends _Task
-#  constructor: (name) ->
-#    super "Dummy: " + name, (task) => task.ready()
-
 class _TaskGen
   constructor: (info) ->
     @manager = info.manager
@@ -182,18 +178,22 @@ class TaskManager
 
   create: (info) ->
     name = this._checkName info
-    $.extend info, manager: this
+    info.manager = this
     task = new _Task info
     @tasks[name] = task
     task
 
+  createDummy: (info) ->
+    info.code = (task) -> task.ready()
+    this.create info  
+
   createGenerator: (info) ->
-    $.extend info, manager: this
+    info.manager = this
     new _TaskGen info
 
   createComposite: (info) ->
     name = this._checkName info        
-    $.extend info, manager: this
+    info.manager = this
     task = new _CompositeTask info
     @tasks[name] = task
     task

@@ -186,13 +186,14 @@ class Annotator extends Delegator
 
     if @options.noScan
       # We were instructed to skip initial DOM scan        
-      new DummyTask "start scan"
+      scan = @tasks.createDummy name: "Skipping scan"
     else
       scan = @_scanGen.create
         instanceName: "Initial scan"
-        # Scanning requires a functional and configured d-t-m        
+        # Scanning requires a functional d-t-m with configured wrapper
         deps: ["setup d-t-m", "setup wrapper"]
-      @init.addSubTask weight: 0.619, task: scan
+
+    @init.addSubTask weight: 0.619, task: scan
 
     @init.createSubTask
       weight: 0.01
