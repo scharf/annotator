@@ -98,12 +98,10 @@
     </div>
 
     <script>
-      var devAnnotator
-      (function ($) {
-        var elem = document.getElementById('airlock');
-
-        devAnnotator = new Annotator(elem, { asyncInit: true });
-        devAnnotator.init.done(function() { devAnnotator
+      var elem = document.getElementById('airlock');
+      var devAnnotator = new Annotator(elem, { asyncInit: true });
+      devAnnotator.init.done(function() {
+        devAnnotator
           .addPlugin('Auth', {
             tokenUrl: 'http://localhost:5001/api/token'
           })
@@ -119,12 +117,11 @@
             }
           });
 
-          devAnnotator.plugins.Auth.withToken(function (tok) {
-            console.log(tok);
-          });
-
+        devAnnotator.plugins.Auth.withToken(function (tok) {
+          console.log(tok);
         });
-      }(jQuery));
+
+      });
     </script>
   </body>
 
