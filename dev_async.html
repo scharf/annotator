@@ -99,24 +99,29 @@
 
     <script>
       var elem = document.getElementById('airlock');
-      var devAnnotator = new Annotator(elem)
+      var devAnnotator = new Annotator(elem, { asyncInit: true })
+          .addPlugin('AnnotateItPermissions')
+          .addPlugin('Store', {
+            // Since the store plugin can run with and without Auth,
+            // we have to tell it to wait for it.
+            deps: ['auth token'],
+            prefix: 'http://localhost:5000/',
+            loadFromSearch: {
+              uri: 'http://localhost/annotator/dev_async.html'
+            },
+            annotationData: {
+              uri: 'http://localhost/annotator/dev_async.html'
+            }
+          })
           .addPlugin('Auth', {
+            // I moved this plugin close to last
+            // intentionally. The order will sort itself out.
             tokenUrl: 'http://localhost:5001/api/token'
           })
           .addPlugin('Unsupported')
-          .addPlugin('AnnotateItPermissions')
-          .addPlugin('Store', {
-            prefix: 'http://localhost:5000/',
-            loadFromSearch: {
-              uri: 'http://localhost/annotator/dev.html'
-            },
-            annotationData: {
-              uri: 'http://localhost/annotator/dev.html'
-            }
-          });
 
-      devAnnotator.plugins.Auth.withToken(function (tok) {
-        console.log(tok);
+      devAnnotator.plugins.Auth.initTask.done(function (info) {
+        console.log(info);
       });
 
     </script>

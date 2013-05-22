@@ -90,6 +90,14 @@ class Annotator.Plugin.Store extends Annotator.Plugin
     super
     @annotations = []
 
+    @initTask = new _Task
+      name: "load annotations"
+      code: (task) =>
+        unless Annotator.supported()
+          task.failed "Annotator is not supported."
+        @initPending = true
+        this._getAnnotations()
+
   # Public: Initialises the plugin and loads the latest annotations. If the
   # Auth plugin is also present it will request an auth token before loading
   # any annotations.
@@ -102,6 +110,8 @@ class Annotator.Plugin.Store extends Annotator.Plugin
   pluginInit: ->
     return unless Annotator.supported()
 
+    # In sync mode, the dependency on auth depends on the order
+    # the plugins are added. If it is there, then we are supposed to wait for it.
     if @annotator.plugins.Auth
       @annotator.plugins.Auth.withToken(this._getAnnotations)
     else
@@ -261,6 +271,11 @@ class Annotator.Plugin.Store extends Annotator.Plugin
   _onLoadAnnotations: (data=[]) =>
     @annotations = @annotations.concat(data)
     @annotator.loadAnnotations(data.slice()) # Clone array
+    # Are we in the middle of a pending initTask?
+    if @initPending
+      @initPending = false
+      # Signal that the task has finished.
+      @initTask.dfd.ready()
 
   # Public: Performs the same task as Store.#loadAnnotations() but calls the
   # 'search' URI with an optional query string.
@@ -484,3 +499,8 @@ class Annotator.Plugin.Store extends Annotator.Plugin
     Annotator.showNotification message, Annotator.Notification.ERROR
 
     console.error Annotator._t("API request failed:") + " '#{xhr.status}'"
+    # Are were in the middle of an async init process?
+    if @initPending
+      @initPending = false
+      # We must signal that the task has failed.
+      @initTask.dfd.failed "API request failed."

@@ -75,7 +75,16 @@ class Annotator extends Delegator
   # Unsupported plugin which will notify users that the Annotator will not work.
   #
   # element - A DOM Element in which to annotate.
-  # options - An options Object. NOTE: There are currently no user options.
+  # options - An options Object.
+  #    asyncInit: if set to true, will use the asynchronous init process. (Default is false.)
+  #               When using this, the created instance is not necesseraly ready to be used
+  #               upon the consturctor's return. You can access the promise in the 'init' field.
+  #    noInit: don't run any init process. If this param is passed, the instance is no initiated
+  #            at all. It's up the the user to call either initSync() or initAsync() later on.
+  #    noScan: while initializing, skip scanning the document. This scan is required for creating
+  #            or re-attaching annotations, but there are situations which can benefit from
+  #            postpoing this process to some other time.
+  #    readOnly: disables the creation of new annotations.
   #
   # Examples
   #
@@ -95,7 +104,11 @@ class Annotator extends Delegator
     # Return early if the annotator is not supported.
     return this unless Annotator.supported()
 
+    @domMapper = new DomTextMapper()
+    @domMatcher = new DomTextMatcher @domMapper
+
     @tasks = new TaskManager "Annotator"
+    @tasks.addDefaultProgress (info) => this.defaultNotify info
 
     unless @options.noInit
       if @options.asyncInit
@@ -110,9 +123,6 @@ class Annotator extends Delegator
 
     @_init = new jQuery.Deferred()
     @init = @_init.promise()
-
-    # Initiate the components responsible for search
-    this._setupDTM()
 
     # Set up CSS styles
     this._setupDynamicStyle()
@@ -141,38 +151,30 @@ class Annotator extends Delegator
     @init = @tasks.createComposite name: "Booting Annotator"
 
     @init.createSubTask
-      weight: 0.031
-      name: "setup d-t-m"
-      code: (task) =>
-        this._setupDTM()
-        task.ready()
-
-    @init.createSubTask
       weight: 0.093
-      name: "setup dynamic CSS styles"
+      name: "dynamic CSS styles"
       code: (task) =>
         this._setupDynamicStyle()
         task.ready()
 
     @init.createSubTask
       weight: 0.062
-      name: "setup wrapper"
-      deps: ["setup d-t-m"] # The wrapper is configured on d-t-m
+      name: "wrapper"
       code: (task) =>
         this._setupWrapper()
         task.ready()
 
     @init.createSubTask
       weight: 0.072
-      name: "create adder"
-      deps: ["setup wrapper"] # Adder is attached to the end of the wrapper
+      name: "adder"
+      deps: ["wrapper"] # Adder is attached to the end of the wrapper
       code: (task) =>
         this.adder = $(this.html.adder).appendTo(@wrapper).hide()
         task.ready()        
 
     @init.createSubTask
       weight: 0.113
-      name: "setup viewer & editor"
+      name: "viewer & editor"
       code: (task) =>
         this._setupViewer()._setupEditor()
         task.ready()
@@ -190,35 +192,29 @@ class Annotator extends Delegator
     else
       scan = @_scanGen.create
         instanceName: "Initial scan"
-        # Scanning requires a functional d-t-m with configured wrapper
-        deps: ["setup d-t-m", "setup wrapper"]
+        # Scanning requires a configured wrapper
+        deps: ["wrapper"]
 
     @init.addSubTask weight: 0.619, task: scan
 
     @init.createSubTask
       weight: 0.01
-      name: "setup document events"
+      name: "document events"
       # We want to listen to events only when everything is ready 
-      deps: ["setup d-t-m", "setup wrapper", "setup viewer & editor",
-              scan, "setup dynamic CSS styles", "create adder"]
+      deps: ["wrapper", "viewer & editor", scan, "dynamic CSS styles", "adder"]
       code: (task) =>
         # Enable annotating
         this._setupDocumentEvents() unless @options.readOnly
         task.ready()
 
+  defaultNotify: (info) =>
+    unless info?.progress? then console.error "No info!"
+    console.log info?.taskName + ": " + info?.progress + " - " + info?.text
+
   initAsync: ->
     this.defineAsyncInitTasks()
-    @init.progress (info) =>
-      console.log info.taskName + ": " + info.progress + " - " + info.text
+    @asyncMode = true
     @tasks.schedule()
-
-  # Initializes the components used for analyzing the DOM
-  _setupDTM: ->
-        
-    @domMapper = new DomTextMapper()
-    @domMatcher = new DomTextMatcher @domMapper
-
-    this
 
   # Perform a sync scan of the DOM. Required for finding anchors.
   _scanSync: ->
@@ -859,9 +855,32 @@ class Annotator extends Delegator
     else
       klass = Annotator.Plugin[name]
       if typeof klass is 'function'
-        @plugins[name] = new klass(@element[0], options)
-        @plugins[name].annotator = this
-        @plugins[name].pluginInit?()
+        @plugins[name] = plugin = new klass(@element[0], options)
+        plugin.annotator = this
+        if @asyncMode
+          # Does this plugin have a dedicated async init task?
+          if plugin.initTask?
+            # Cool. We just need to add this to our task manager.
+            @tasks.add plugin.initTask
+          else
+            # No built-in init task provided; we create one from the sync init method.
+            plugin.initTask = @tasks.create
+              name: "plugin " + name
+              deps: plugin.deps
+              code: (task) =>
+                plugin.asyncMode = true
+                plugin.pluginInit?()
+                task.ready()
+
+          # We have the init task. Let's add any extra dependencies
+          if options?.deps? then plugin.initTask.addDeps options.deps
+
+          # Let's schedule it!
+          @tasks.schedule()
+
+        else
+          console.log "Initing plugin '" + name + "'."
+          @plugins[name].pluginInit?()
       else
         console.error _t("Could not load ") + name + _t(" plugin. Have you included the appropriate <script> tag?")
     this # allow chaining

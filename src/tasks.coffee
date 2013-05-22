@@ -6,8 +6,6 @@ class _Task
     id.substr 0, length
         
   constructor: (info) ->
-    unless info.manager?
-      throw new Error "Trying to create task with no manager!"
     unless info.name?
       throw new Error "Trying to create task with no name!"
     unless info.code?
@@ -26,21 +24,40 @@ class _Task
     @dfd.notify = (data) =>
       @dfd._notify $.extend data, task: this, taskName: @_name
 
+    # Rename resolve to _resolve, so that nobody calls it by accident.
+    @dfd._resolve = @dfd.resolve
+    @dfd.resolve = -> throw new Error "Use ready() instead of resolve()!"
+
+    @dfd._reject = @dfd.reject
+    @dfd.reject = -> throw new Error "Use failed() instead of reject()!"
+
     @dfd.ready = (data) =>
+      unless @dfd.state() is "pending"
+        throw new Error "Called ready() on a task in state '" + @dfd.state() + "'!"
       endTime = new Date().getTime()
       elapsedTime = endTime - @dfd.startTime
       @dfd.notify
         progress: 1
         text: "Finished in " + elapsedTime + "ms."
-      @dfd.resolve data
+      @dfd._resolve data
+
+    @dfd.failed = (data) =>
+      unless @dfd.state() is "pending"
+        throw new Error "Called failed() on a task in state '" + @dfd.state() + "'!"
+      endTime = new Date().getTime()
+      elapsedTime = endTime - @dfd.startTime
+      @dfd.notify
+        progress: 1
+        text: "Failed in " + elapsedTime + "ms."
+      @dfd._reject data
+
+
     @dfd.promise this
 
   setDeps: (deps) ->
-    unless Array.isArray deps then deps = [deps]        
-    @_deps = deps
-#    console.log "Deps now:"
-#    console.log @_deps
-        
+    @_deps = []
+    this.addDeps deps
+
   addDeps: (toAdd) ->
     unless Array.isArray toAdd then toAdd = [toAdd]
     for dep in toAdd
@@ -57,10 +74,12 @@ class _Task
   resolveDeps: ->
     @_depsResolved = ((if typeof dep is "string" then @manager.lookup dep else dep) for dep in @_deps)
 
-  _start: => 
+  _start: =>
     if @started
-      console.log "This task ('" + @_name + "') has already been started!"
+#      console.log "This task ('" + @_name + "') has already been started!"
       return
+    unless @_depsResolved?
+      throw Error "Dependencies are not resolved for task '"+ @_name +"'!"
     for dep in @_depsResolved
       unless dep.isResolved()
         console.log "What am I doing here? Out of the " +
@@ -69,12 +88,21 @@ class _Task
           "' has not yet been resolved!"
         return
 
+    @started = true
     setTimeout =>
       @dfd.notify
         progress: 0
         text: "Starting"
       @dfd.startTime = new Date().getTime()
       @_todo @dfd, @_data
+
+  _skip: =>
+    if @started then return
+    @started = true
+    @dfd.notify
+      progress: 1
+      text: "Skipping, because some dependencies have failed."
+    @dfd._reject()
 
 class _TaskGen
   constructor: (info) ->
@@ -104,7 +132,7 @@ class _CompositeTask extends _Task
     # sub-tasks depend on. So, in effect, running the task
     # allows to sub-tasks (that don't have other dependencies)
     # to execute.
-    info.code = => @trigger.dfd.resolve() 
+    info.code = => @trigger.dfd._resolve()
  
     super info
     @subTasks = {}
@@ -163,6 +191,9 @@ class _CompositeTask extends _Task
 class TaskManager
   constructor: (name) ->
     @name = name
+    @defaultProgressCallbacks = []
+
+  addDefaultProgress: (callback) -> @defaultProgressCallbacks.push callback
 
   tasks: {}
 
@@ -178,10 +209,15 @@ class TaskManager
 
   create: (info) ->
     name = this._checkName info
-    info.manager = this
     task = new _Task info
-    @tasks[name] = task
+    this.add task
     task
+
+  add: (task) ->
+    task.manager = this
+    @tasks[task._name] = task
+    for cb in @defaultProgressCallbacks
+      task.progress cb
 
   createDummy: (info) ->
     info.code = (task) -> task.ready()
@@ -192,10 +228,12 @@ class TaskManager
     new _TaskGen info
 
   createComposite: (info) ->
-    name = this._checkName info        
+    name = this._checkName info
     info.manager = this
     task = new _CompositeTask info
     @tasks[name] = task
+    for cb in @defaultProgressCallbacks
+      task.progress cb
     task
 
   setDeps: (from, to) -> (@lookup from).setDeps to
@@ -208,25 +246,28 @@ class TaskManager
   lookup: (name) ->
     result = @tasks[name]
     unless result?
-      throw new Error "Looking up non-existant task '" + name + "'." +
-        " Known tasks are: " + @tasks.keys
+      console.log "Missing dependency: '" + name + "'."
+      throw new Error "Looking up non-existant task '" + name + "'."
     result
 
   schedule: () ->
     for name, task of @tasks
-      try  
-        deps = task.resolveDeps()
-        dt = task
-        if deps.length is 0 then task._start()
-        else if deps.length is 1 then deps[0].done task._start 
-        else $.when.apply(null, deps).done task._start
+      unless task.started
+        try
+          deps = task.resolveDeps()
+          if deps.length is 0 and not task.started
+            task._start()
+          else if deps.length is 1
+            deps[0].done task._start
+            deps[0].fail task._skip
+          else
+            p = $.when.apply(null, deps)
+            p.done task._start
+            p.fail task._skip
           
-      catch exception
-        console.log "E:"
-        console.log exception
-        console.log exception.stack
-        console.log "Could not resolve dependencies for task '" + name +
-           "', so not scheduling it."
+        catch exception
+          console.log "Could not resolve dependencies for task '" + name +
+             "', so not scheduling it."
 
     null
 

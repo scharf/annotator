@@ -116,6 +116,17 @@ class Annotator.Plugin.Auth extends Annotator.Plugin
     # List of functions to be executed when we have a valid token.
     @waitingForToken = []
 
+    @initTask = new _Task
+      name: "auth token"
+      code: (task) =>
+        if @options.token
+          this.setToken(@options.token)
+          task.ready token: @token
+        else
+          @asyncInit = true
+          this.requestToken()
+
+  initPlugin: ->
     if @options.token
       this.setToken(@options.token)
     else
@@ -135,17 +146,23 @@ class Annotator.Plugin.Auth extends Annotator.Plugin
       url: @options.tokenUrl
       dataType: 'text'
       xhrFields:
-        withCredentials: true # Send any auth cookies to the backend
+        withCredentials: true # Send any auth cookies to the backend
 
     # on success, set the auth token
     .done (data, status, xhr) =>
       this.setToken(data)
+      if @asyncInit
+        @asyncInit = false
+        @initTask.dfd.ready @_unsafeToken
 
     # on failure, relay any message given by the server to the user with a notification
     .fail (xhr, status, err) =>
       msg = Annotator._t("Couldn't get auth token:")
       console.error "#{msg} #{err}", xhr
       Annotator.showNotification("#{msg} #{xhr.responseText}", Annotator.Notification.ERROR)
+      if @asyncInit
+        @asyncInit = false
+        @initTask.dfd.failed msg
 
     # always reset the requestInProgress indicator
     .always =>
@@ -235,6 +252,10 @@ class Annotator.Plugin.Auth extends Annotator.Plugin
   #
   # Returns nothing.
   withToken: (callback) ->
+    if @asyncMode
+      # In Async mode, task dependencies provide the same (and more) functionalty.
+      throw new Error "You are not supposed to use withToken in Async Mode!"
+
     if not callback?
       return
 

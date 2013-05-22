@@ -140,6 +140,18 @@ class Annotator.Plugin.Permissions extends Annotator.Plugin
     if @options.user
       this.setUser(@options.user)
       delete @options.user
+    else
+      # We need Auth plugin for default user and permissions
+      # Adding this value to the dep file will
+      # make the async plugin init process wait for it.
+      @deps.push "auth token"
+
+  # Declared dependencies (for async plugin loading)
+  deps: [
+    "viewer & editor" # We add stuff to editor
+    # A dependency for the auth plugin is
+    # added in the constructor, if required.
+  ]
 
   # Public: Initializes the plugin and registers fields with the
   # Annotator.Editor and Annotator.Viewer.
@@ -154,7 +166,16 @@ class Annotator.Plugin.Permissions extends Annotator.Plugin
 
     # Set up user and default permissions from auth token if none currently given
     if !@user and @annotator.plugins.Auth
-      @annotator.plugins.Auth.withToken(this._setAuthFromToken)
+      auth = @annotator.plugins.Auth
+      if @asyncMode
+        # When running in async mode, the auth plugin
+        # is guaranteed to be initialized by the time
+        # our init is run. So we just fetch the token.
+        this._setAuthFromToken auth.token
+      else
+        # In synchronous mode, we must use this ad-hoc callback registry
+        # to ensure a valid token.
+        auth.withToken this._setAuthFromToken
 
     if @options.showViewPermissionsCheckbox == true
       @annotator.editor.addField({
