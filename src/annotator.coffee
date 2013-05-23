@@ -101,6 +101,9 @@ class Annotator extends Delegator
     super
     @log = getXLogger "Annotator"
     @tasklog = getXLogger "Annotator tasks"
+    @alog = getXLogger "Annotator anchoring"
+    # Uncomment this if you feel like debugging anchoring
+    # @alog.setLevel XLOG_LEVEL.DEBUG
 
     @plugins = {}
 
@@ -215,7 +218,7 @@ class Annotator extends Delegator
     info.progress ?= 0
     num = Math.round ( 100 * info.progress )
     progressText = num.toString() + "%"
-    @tasklog.info info.taskName + ": " + progressText + " - " + info.text
+    @tasklog.debug info.taskName + ": " + progressText + " - " + info.text
 
   initAsync: ->
     this.defineAsyncInitTasks()
@@ -490,19 +493,19 @@ class Annotator extends Delegator
         content = @domMapper.getContentForCharRange startOffset, endOffset
         currentQuote = this.normalizeString content
         if currentQuote isnt savedQuote
-          console.log "Could not apply XPath selector to current document \
+          @alog.debug "Could not apply XPath selector to current document \
             because the quote has changed. (Saved quote is '#{savedQuote}'. \
             Current quote is '#{currentQuote}'.)"
           return null
         else
-          console.log "Saved quote matches."
+          @alog.debug "Saved quote matches."
       else
-        console.log "No saved quote, nothing to compare. Assume that it's OK."
+        @alog.debug "No saved quote, nothing to compare. Assume that it's OK."
       range: normalizedRange
       quote: savedQuote
     catch exception
       if exception instanceof Range.RangeError
-        console.log "Could not apply XPath selector to current document. \
+        @alog.debug "Could not apply XPath selector to current document. \
           The document structure may have changed."
         null
       else
@@ -633,8 +636,8 @@ class Annotator extends Delegator
   findAnchor: (target) ->
     unless target?
       throw new Error "Trying to find anchor for null target!"
-    console.log "Trying to find anchor for target: "
-    console.log target
+    @alog.debug "Trying to find anchor for target: "
+    @alog.debug target
 
     # Simple strategy based on DOM Range
     anchor = this.findAnchorFromRangeSelector target
@@ -697,13 +700,9 @@ class Annotator extends Delegator
           normedRanges.push anchor.range
           annotation.quote.push t.quote
         else
-          console.log "Could not find anchor target for annotation '" +
-              annotation.id + "'."
+          @alog.info "Could not find anchor target for annotation '" + annotation.id + "'."
       catch exception
-        if exception.stack? then console.log exception.stack
-        console.log exception.message
-        console.log exception
-
+        @alog.error "Internal error while anchoring", exception
 
     annotation.ranges     = []
     annotation.highlights = []
