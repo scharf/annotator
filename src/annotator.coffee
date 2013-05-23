@@ -287,6 +287,12 @@ class Annotator extends Delegator
   #   # => Returns []
   #
   # Returns Array of NormalizedRange instances.
+  getSelectedRanges: ->
+    for target in this.getSelectedTargets()
+      range = this.findSelector target.selector, "RangeSelector"
+      unless range? then continue
+      Range.sniff(range).normalize(@wrapper[0])
+
   getSelectedTargets: ->
     unless @domMapper?
       throw new Error "Can not execute getSelectedTargets() before _setupMatching()!"

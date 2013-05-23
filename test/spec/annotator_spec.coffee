@@ -272,7 +272,7 @@ describe 'Annotator', ->
 
       $fix.hide()
 
-  describe "getSelectedTargets", ->
+  describe "getSelectedRanges", ->
     mockGlobal = null
     mockSelection = null
     mockRange = null
