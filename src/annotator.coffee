@@ -864,19 +864,32 @@ class Annotator extends Delegator
         @plugins[name] = plugin = new klass(@element[0], options)
         plugin.annotator = this
         if @asyncMode
-          # Does this plugin have a dedicated async init task?
-          if plugin.initTask?
-            # Cool. We just need to add this to our task manager.
-            @tasks.add plugin.initTask
-          else
-            # No built-in init task provided; we create one from the sync init method.
-            plugin.initTask = @tasks.create
+          # First, we need to get the task info.
+
+          # Does this plugin have a dedicated async init task recipe?
+          # If yes, then we can create a task using this info.
+          taskInfo = plugin.initTaskInfo
+
+          if (not taskInfo?) and plugin.pluginInit?
+            # At least we have a synchronous init method.
+            # Let's wrap a task around that!
+            taskInfo =
               name: "plugin " + name
               deps: plugin.deps
               code: (task) =>
                 plugin.asyncMode = true
-                plugin.pluginInit?()
+                plugin.pluginInit()
                 task.ready()
+
+          # OK, we have the info, now let's create a task from this info!
+          plugin.initTask = if @init.state() is "pending"
+            # Init is still running. Let's make a sub-task!
+            taskInfo.weight ?= 1
+            @init.createSubTask taskInfo
+          else
+            # Init has already finished.
+            # Let's create a simple new task!
+            @tasks.create taskInfo
 
           # We have the init task. Let's add any extra dependencies
           if options?.deps? then plugin.initTask.addDeps options.deps

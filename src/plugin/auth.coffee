@@ -114,9 +114,11 @@ class Annotator.Plugin.Auth extends Annotator.Plugin
     super
 
     # List of functions to be executed when we have a valid token.
+    # (This is only supported synchronous mode; in async mode, use proper dependencies instead.)
     @waitingForToken = []
 
-    @initTask = new _Task
+    # This is the information used to construct the plugin init task in async mode.
+    @initTaskInfo =
       name: "auth token"
       code: (task) =>
         if @options.token

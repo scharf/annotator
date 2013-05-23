@@ -6,6 +6,8 @@ class _Task
     id.substr 0, length
         
   constructor: (info) ->
+    unless info.manager?
+      throw new Error "Trying to create task with no manager!"
     unless info.name?
       throw new Error "Trying to create task with no name!"
     unless info.code?
@@ -113,7 +115,6 @@ class _TaskGen
 
   create: (info) ->
     @count += 1
-    name =
     @manager.create
       name: @name + " #" + @count + ": " + info.instanceName
       code: @todo
@@ -213,16 +214,13 @@ class TaskManager
 
   create: (info, useDefaultProgress = true) ->
     name = this._checkName info
+    info.manager = this
     task = new _Task info
-    this.add task, useDefaultProgress
-    task
-
-  add: (task, useDefaultProgress = true) ->
-    task.manager = this
     @tasks[task._name] = task
     if useDefaultProgress
       for cb in @defaultProgressCallbacks
         task.progress cb
+    task
 
   createDummy: (info) ->
     info.code = (task) -> task.ready()
