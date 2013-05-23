@@ -213,8 +213,7 @@ class Range.BrowserRange
 
     # Make sure the common ancestor is an element node.
     nr.commonAncestor = @commonAncestorContainer
-    # elementNode nodeType == 1
-    while nr.commonAncestor.nodeType isnt 1
+    while nr.commonAncestor.nodeType isnt Node.ELEMENT_NODE
       nr.commonAncestor = nr.commonAncestor.parentNode
 
     if window.DomTextMapper? and changed
