@@ -90,7 +90,7 @@ class Annotator.Plugin.Store extends Annotator.Plugin
     super
     @annotations = []
 
-    initTaskInfo =
+    @initTaskInfo =
       name: "load annotations"
       code: (task) =>
         unless Annotator.supported()

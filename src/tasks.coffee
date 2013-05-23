@@ -138,6 +138,7 @@ class _CompositeTask extends _Task
     super info
     @subTasks = {}
     @pendingSubTasks = 0
+    @failedSubTasks = 0
     @trigger = this.createSubTask
       weight: 0
       name: info.name + "__init"
@@ -145,6 +146,11 @@ class _CompositeTask extends _Task
         # A trigget does not need to do anything.
         # Resolving the trigger task will trigger the rest of the tasks.
 
+  _finished: ->
+    if @failedSubTasks
+      @dfd.failed()        
+    else
+      @dfd.ready()    
 
   addSubTask: (info) ->
     weight = info.weight
@@ -162,7 +168,12 @@ class _CompositeTask extends _Task
 
     task.done =>
       @pendingSubTasks -= 1
-      unless @pendingSubTasks then @dfd.ready()
+      this._finished() unless @pendingSubTasks
+
+    task.fail =>
+      @failedSubTasks += 1
+      @pendingSubTasks -= 1
+      this._finished() unless @pendingSubTasks
         
     task.progress (info) =>
       task = info.task

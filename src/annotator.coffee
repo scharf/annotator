@@ -100,7 +100,11 @@ class Annotator extends Delegator
   constructor: (element, options) ->
     super
     @log = getXLogger "Annotator"
+
     @tasklog = getXLogger "Annotator tasks"
+    # Uncomment this if you feel like debugging async task management
+    # tasklog.setLevel XLOG_LEVEL.DEBUG
+
     @alog = getXLogger "Annotator anchoring"
     # Uncomment this if you feel like debugging anchoring
     # @alog.setLevel XLOG_LEVEL.DEBUG
