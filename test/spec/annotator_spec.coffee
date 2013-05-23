@@ -2,11 +2,11 @@ describe 'Annotator', ->
   annotator = null
   mock = null
 
-  beforeEach ->
-    annotator = new Annotator($('<div></div>')[0], {})
+  beforeEach -> annotator = new Annotator(fix(), {})
 
-  afterEach  -> $(document).unbind()
-    window.DomTextMapper.instances = []
+  afterEach  ->
+    clearFixtures()
+    $(document).unbind()
 
   describe "events", ->
     it "should call Annotator#onAdderClick() when adder is clicked", ->
