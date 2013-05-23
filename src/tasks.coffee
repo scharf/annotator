@@ -171,10 +171,12 @@ class _CompositeTask extends _Task
       $.extend taskInfo, info
 
       progress = 0
+      totalWeight = 0
       for countId, countInfo of @subTasks
         progress += countInfo.progress * countInfo.weight
+        totalWeight += countInfo.weight
       report =
-        progress: progress
+        progress: progress / totalWeight
 
       if info.text?
         report.text = task._name + ": " + info.text
@@ -184,7 +186,7 @@ class _CompositeTask extends _Task
   createSubTask: (info) ->
     w = info.weight
     delete info.weight        
-    task = @manager.create info
+    task = @manager.create info, false
     this.addSubTask weight: w, task: task
     task
 
@@ -209,17 +211,18 @@ class TaskManager
         "' with new definition!"
     name
 
-  create: (info) ->
+  create: (info, useDefaultProgress = true) ->
     name = this._checkName info
     task = new _Task info
-    this.add task
+    this.add task, useDefaultProgress
     task
 
-  add: (task) ->
+  add: (task, useDefaultProgress = true) ->
     task.manager = this
     @tasks[task._name] = task
-    for cb in @defaultProgressCallbacks
-      task.progress cb
+    if useDefaultProgress
+      for cb in @defaultProgressCallbacks
+        task.progress cb
 
   createDummy: (info) ->
     info.code = (task) -> task.ready()

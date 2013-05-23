@@ -154,21 +154,21 @@ class Annotator extends Delegator
     @init = @tasks.createComposite name: "Booting Annotator"
 
     @init.createSubTask
-      weight: 0.093
+      weight: 1
       name: "dynamic CSS styles"
       code: (task) =>
         this._setupDynamicStyle()
         task.ready()
 
     @init.createSubTask
-      weight: 0.062
+      weight: 1
       name: "wrapper"
       code: (task) =>
         this._setupWrapper()
         task.ready()
 
     @init.createSubTask
-      weight: 0.072
+      weight: 1
       name: "adder"
       deps: ["wrapper"] # Adder is attached to the end of the wrapper
       code: (task) =>
@@ -176,7 +176,7 @@ class Annotator extends Delegator
         task.ready()        
 
     @init.createSubTask
-      weight: 0.113
+      weight: 1
       name: "viewer & editor"
       code: (task) =>
         this._setupViewer()._setupEditor()
@@ -198,10 +198,10 @@ class Annotator extends Delegator
         # Scanning requires a configured wrapper
         deps: ["wrapper"]
 
-    @init.addSubTask weight: 0.619, task: scan
+    @init.addSubTask weight: 20, task: scan
 
     @init.createSubTask
-      weight: 0.01
+      weight: 0
       name: "document events"
       # We want to listen to events only when everything is ready 
       deps: ["wrapper", "viewer & editor", scan, "dynamic CSS styles", "adder"]
@@ -211,7 +211,11 @@ class Annotator extends Delegator
         task.ready()
 
   defaultNotify: (info) =>
-    @tasklog.debug info?.taskName + ": " + info?.progress + " - " + info?.text
+    info ?= { }
+    info.progress ?= 0
+    num = Math.round ( 100 * info.progress )
+    progressText = num.toString() + "%"
+    @tasklog.info info.taskName + ": " + progressText + " - " + info.text
 
   initAsync: ->
     this.defineAsyncInitTasks()
