@@ -293,6 +293,11 @@ class Annotator extends Delegator
       unless range? then continue
       Range.sniff(range).normalize(@wrapper[0])
 
+  # Public: Gets the current selection excluding any nodes that fall outside of
+  # the @wrapper. Then returns an Array of annotation targets which are objects
+  # containing a source URI and an array of resource selectors.
+  #
+  # Returns Array of Object instances with `source` and `selector` keys.
   getSelectedTargets: ->
     unless @domMapper?
       throw new Error "Can not execute getSelectedTargets() before _setupMatching()!"
