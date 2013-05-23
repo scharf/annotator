@@ -307,6 +307,7 @@ class Annotator extends Delegator
     source = this.getHref()
 
     targets = []
+    ranges = []
     rangesToIgnore = []
     unless selection.isCollapsed
       targets = for i in [0...selection.rangeCount]
@@ -317,14 +318,17 @@ class Annotator extends Delegator
         # If the new range falls fully outside the wrapper, we
         # should add it back to the document but not return it from
         # this method
-        rangesToIgnore.push(r) if normedRange is null
-
-        selector: [
-          this.getRangeSelector normedRange
-          this.getTextQuoteSelector normedRange
-          this.getTextPositionSelector normedRange
-        ]
-        source: source
+        if normedRange?
+          ranges.push(normedRange)
+          selector: [
+            this.getRangeSelector normedRange
+            this.getTextQuoteSelector normedRange
+            this.getTextPositionSelector normedRange
+          ]
+          source: source
+        else
+          rangesToIgnore.push(realRange)
+          continue
 
       # BrowserRange#normalize() modifies the DOM structure and deselects the
       # underlying text as a result. So here we remove the selected ranges and
@@ -334,15 +338,13 @@ class Annotator extends Delegator
     for r in rangesToIgnore
       selection.addRange(r)
 
-    # Remove any targets that's range fell outside of @wrapper.
-    $.grep targets, (target) =>
+    # Remove any ranges that fell outside of @wrapper.
+    $.grep ranges, (range) ->
       # Add the normed range back to the selection if it exists.
-      selector = this.findSelector target.selector, "RangeSelector"
-      if selector?
-        range = (Range.sniff selector).normalize @wrapper[0]
-        if range?
-          selection.addRange range.toRange()
-          true
+      selection.addRange(range.toRange()) if range
+      range
+
+    targets
 
   # Public: Creates and returns a new annotation object. Publishes the
   # 'beforeAnnotationCreated' event to allow the new annotation to be modified.
