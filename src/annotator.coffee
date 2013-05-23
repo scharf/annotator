@@ -99,6 +99,9 @@ class Annotator extends Delegator
   # Returns a new instance of the Annotator.
   constructor: (element, options) ->
     super
+    @log = getXLogger "Annotator"
+    @tasklog = getXLogger "Annotator tasks"
+
     @plugins = {}
 
     # Return early if the annotator is not supported.
@@ -208,8 +211,7 @@ class Annotator extends Delegator
         task.ready()
 
   defaultNotify: (info) =>
-    unless info?.progress? then console.error "No info!"
-    console.log info?.taskName + ": " + info?.progress + " - " + info?.text
+    @tasklog.debug info?.taskName + ": " + info?.progress + " - " + info?.text
 
   initAsync: ->
     this.defineAsyncInitTasks()
@@ -879,7 +881,7 @@ class Annotator extends Delegator
           @tasks.schedule()
 
         else
-          console.log "Initing plugin '" + name + "'."
+          @log.debug "Synchronously initing plugin '" + name + "'."
           @plugins[name].pluginInit?()
       else
         console.error _t("Could not load ") + name + _t(" plugin. Have you included the appropriate <script> tag?")

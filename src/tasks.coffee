@@ -191,6 +191,8 @@ class _CompositeTask extends _Task
 class TaskManager
   constructor: (name) ->
     @name = name
+    @log ?= getXLogger name + " TaskMan"
+#    @log.setLevel XLOG_LEVEL.DEBUG
     @defaultProgressCallbacks = []
 
   addDefaultProgress: (callback) -> @defaultProgressCallbacks.push callback
@@ -246,7 +248,7 @@ class TaskManager
   lookup: (name) ->
     result = @tasks[name]
     unless result?
-      console.log "Missing dependency: '" + name + "'."
+      @log.debug "Missing dependency: '" + name + "'."
       throw new Error "Looking up non-existant task '" + name + "'."
     result
 
@@ -266,7 +268,7 @@ class TaskManager
             p.fail task._skip
           
         catch exception
-          console.log "Could not resolve dependencies for task '" + name +
+          @log.debug "Could not resolve dependencies for task '" + name +
              "', so not scheduling it."
 
     null
