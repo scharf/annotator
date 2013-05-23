@@ -95,7 +95,6 @@ class Annotator.Plugin.Store extends Annotator.Plugin
       code: (task) =>
         unless Annotator.supported()
           task.failed "Annotator is not supported."
-        @initPending = true
         this._getAnnotations()
 
   # Public: Initialises the plugin and loads the latest annotations. If the
@@ -272,8 +271,7 @@ class Annotator.Plugin.Store extends Annotator.Plugin
     @annotations = @annotations.concat(data)
     @annotator.loadAnnotations(data.slice()) # Clone array
     # Are we in the middle of a pending initTask?
-    if @initPending
-      @initPending = false
+    if @initTask?.state() is "pending"
       # Signal that the task has finished.
       @initTask.dfd.ready()
 
@@ -500,7 +498,6 @@ class Annotator.Plugin.Store extends Annotator.Plugin
 
     console.error Annotator._t("API request failed:") + " '#{xhr.status}'"
     # Are were in the middle of an async init process?
-    if @initPending
-      @initPending = false
+    if @initTask?.state() is "pending"
       # We must signal that the task has failed.
       @initTask.dfd.failed "API request failed."

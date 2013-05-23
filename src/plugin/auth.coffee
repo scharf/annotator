@@ -125,7 +125,6 @@ class Annotator.Plugin.Auth extends Annotator.Plugin
           this.setToken(@options.token)
           task.ready token: @token
         else
-          @asyncInit = true
           this.requestToken()
 
   initPlugin: ->
@@ -153,8 +152,7 @@ class Annotator.Plugin.Auth extends Annotator.Plugin
     # on success, set the auth token
     .done (data, status, xhr) =>
       this.setToken(data)
-      if @asyncInit
-        @asyncInit = false
+      if @initTask?.state() is "pending"
         @initTask.dfd.ready @_unsafeToken
 
     # on failure, relay any message given by the server to the user with a notification
@@ -162,8 +160,7 @@ class Annotator.Plugin.Auth extends Annotator.Plugin
       msg = Annotator._t("Couldn't get auth token:")
       console.error "#{msg} #{err}", xhr
       Annotator.showNotification("#{msg} #{xhr.responseText}", Annotator.Notification.ERROR)
-      if @asyncInit
-        @asyncInit = false
+      if @initTask?.state() is "pending"
         @initTask.dfd.failed msg
 
     # always reset the requestInProgress indicator
