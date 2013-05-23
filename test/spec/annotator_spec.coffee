@@ -295,7 +295,7 @@ describe 'Annotator', ->
       root.appendChild(head)
       root.appendChild(para)
 
-      annotator.domMapper.setRootNode root
+      annotator.wrapper.prepend(root)
       annotator._scan()
 
       mockBrowserRange = {
