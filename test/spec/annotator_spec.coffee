@@ -473,7 +473,9 @@ describe 'Annotator', ->
         text: "my annotation comment"
         highlights: $('<span><em>Hats</em></span><span><em>Gloves</em></span>')
       }
-      div = $('<div />').append(annotation.highlights)
+      div = $('<div />')
+      div.prependTo(annotator.wrapper)
+      annotation.highlights.appendTo(div)
 
     it "should remove the highlights from the DOM", ->
       annotation.highlights.each ->
@@ -538,7 +540,7 @@ describe 'Annotator', ->
       textNodes = (document.createTextNode(text) for text in ['hello', 'world'])
       mockRange =
         textNodes: -> textNodes
-
+      annotator.wrapper.prepend(textNodes)
       elements = annotator.highlightRange(mockRange)
       assert.lengthOf(elements, 2)
       assert.equal(elements[0].className, 'annotator-hl')
@@ -549,7 +551,7 @@ describe 'Annotator', ->
       textNodes = (document.createTextNode(text) for text in ['hello', '\n ', '      '])
       mockRange =
         textNodes: -> textNodes
-
+      annotator.wrapper.prepend(textNodes)
       elements = annotator.highlightRange(mockRange)
       assert.lengthOf(elements, 1)
       assert.equal(elements[0].className, 'annotator-hl')
@@ -559,7 +561,7 @@ describe 'Annotator', ->
       textNodes = (document.createTextNode(text) for text in ['hello', 'world'])
       mockRange =
         textNodes: -> textNodes
-
+      annotator.wrapper.prepend(textNodes)
       elements = annotator.highlightRange(mockRange, 'monkeys')
       assert.equal(elements[0].className, 'monkeys')
 
@@ -568,6 +570,7 @@ describe 'Annotator', ->
       textNodes = (document.createTextNode(text) for text in ['hello', 'world'])
       mockRange =
         textNodes: -> textNodes
+      annotator.wrapper.prepend(textNodes)
       ranges = [mockRange, mockRange, mockRange]
       elements = annotator.highlightRanges(ranges)
       assert.lengthOf(elements, 6)
@@ -577,6 +580,7 @@ describe 'Annotator', ->
       textNodes = (document.createTextNode(text) for text in ['hello', 'world'])
       mockRange =
         textNodes: -> textNodes
+      annotator.wrapper.prepend(textNodes)
       ranges = [mockRange, mockRange, mockRange]
       elements = annotator.highlightRanges(ranges, 'monkeys')
       assert.equal(elements[0].className, 'monkeys')
