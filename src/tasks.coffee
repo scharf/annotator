@@ -24,8 +24,7 @@ class _Task
     @dfd = new jQuery.Deferred()
 
     @dfd._notify = @dfd.notify
-    @dfd.notify = (data) =>
-      @dfd._notify $.extend data, task: this
+    @dfd.notify = (data) => @dfd._notify $.extend data, task: this
 
     # Rename resolve to _resolve, so that nobody calls it by accident.
     @dfd._resolve = @dfd.resolve
@@ -176,15 +175,16 @@ class _CompositeTask extends _Task
       this._finished() unless @pendingSubTasks
         
     task.progress (info) =>
-      unless info.task?
-        console.log "Progress info from sub-task:"
-        console.log info
-
       task = info.task
-      delete info.task
+
+      # The trigger is a library internal thing.
+      # We should not report anything about it.
       return if task is @trigger
-      taskInfo = @subTasks[task.taskID]
-      $.extend taskInfo, info
+
+      taskInfo = @subTasks[task.taskID]        
+      for key, value of info
+        unless key is "task"
+          taskInfo[key] = value
 
       progress = 0
       totalWeight = 0
@@ -199,15 +199,19 @@ class _CompositeTask extends _Task
 
       @dfd.notify report
 
+    task
+
   createSubTask: (info) ->
     w = info.weight
     delete info.weight        
-    task = @manager.create info, false
-    this.addSubTask weight: w, task: task
-    task
+    this.addSubTask
+      weight: w
+      task: @manager.create info, false
 
   createDummySubTask: (info) ->
-    this.addSubTask weight: 0, task: @manager.createDummy info, false
+    this.addSubTask
+      weight: 0
+      task: @manager.createDummy info, false        
 
 class TaskManager
   constructor: (name) ->

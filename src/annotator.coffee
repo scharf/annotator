@@ -210,8 +210,7 @@ class Annotator extends Delegator
         # Scanning requires a configured wrapper
         deps: ["wrapper"]
       scan = @_scanGen.create info, false
-
-    @init.addSubTask weight: 20, task: scan
+      @init.addSubTask weight: 20, task: scan
 
     @init.createSubTask
       weight: 0
