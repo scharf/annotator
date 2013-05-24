@@ -2,8 +2,11 @@ describe 'Annotator', ->
   annotator = null
   mock = null
 
-  beforeEach -> annotator = new Annotator($('<div></div>')[0], {})
-  afterEach  -> $(document).unbind()
+  beforeEach -> annotator = new Annotator(fix(), {})
+
+  afterEach  ->
+    clearFixtures()
+    $(document).unbind()
 
   describe "events", ->
     it "should call Annotator#onAdderClick() when adder is clicked", ->
@@ -274,21 +277,51 @@ describe 'Annotator', ->
     mockSelection = null
     mockRange = null
     mockBrowserRange = null
+    mockSerializedRange = null
 
     beforeEach ->
+
+      headText  = document.createTextNode("My Heading")
+      paraText  = document.createTextNode("My paragraph")
+      paraText2 = document.createTextNode(" continues")
+
+      head = document.createElement('h1')
+      head.appendChild(headText)
+      para = document.createElement('p')
+      para.appendChild(paraText)
+      para.appendChild(paraText2)
+
+      root = document.createElement('div')
+      root.appendChild(head)
+      root.appendChild(para)
+
+      annotator.wrapper.prepend(root)
+      annotator._scan()
+
       mockBrowserRange = {
         cloneRange: sinon.stub()
       }
       mockBrowserRange.cloneRange.returns(mockBrowserRange)
 
-      # This mock pretends to be both NormalizedRange and BrowserRange.
+      mockSerializedRange = {
+        normalize: sinon.spy()
+        startContainer: '/div[1]/p[1]'
+        endContainer: '/div[1]/p[1]'
+        startOffset: 0
+        endOffset: 10
+      }
+
       mockRange = {
         limit: sinon.stub()
         normalize: sinon.stub()
         toRange: sinon.stub().returns('range')
+        serialize: sinon.stub()
+        start: paraText
+        end: paraText2
       }
       mockRange.limit.returns(mockRange)
       mockRange.normalize.returns(mockRange)
+      mockRange.serialize.returns(mockSerializedRange)
 
       # https://developer.mozilla.org/en/nsISelection
       mockSelection = {
@@ -307,11 +340,12 @@ describe 'Annotator', ->
       util.getGlobal.restore()
       Range.BrowserRange.restore()
 
-    it "should retrieve the global object and call getSelection()", ->
+    it "should retrieve the global object and call getSelection() and serialize()", ->
       annotator.getSelectedRanges()
       assert(mockGlobal.getSelection.calledOnce)
+      assert(mockRange.serialize.calledOnce)
 
-    it "should retrieve the global object and call getSelection()", ->
+    it "should return the selected ranges", ->
       ranges = annotator.getSelectedRanges()
       assert.deepEqual(ranges, [mockRange])
 
@@ -352,6 +386,7 @@ describe 'Annotator', ->
     annotationObj = null
     normalizedRange = null
     sniffedRange = null
+    serializedRange = null
 
     beforeEach ->
       quote   = 'This is some annotated text'
@@ -365,15 +400,19 @@ describe 'Annotator', ->
       sniffedRange = {
         normalize: sinon.stub().returns(normalizedRange)
       }
+      serializedRange = type: "RangeSelector"
       sinon.stub(Range, 'sniff').returns(sniffedRange)
       sinon.stub(annotator, 'highlightRange').returns(element)
       sinon.spy(annotator, 'publish')
 
       annotationObj = {
         text: comment,
-        ranges: [1]
+        target: [
+          selector: [serializedRange]
+        ]
       }
-      annotation = annotator.setupAnnotation(annotationObj)
+
+      annotation = annotator.setupAnnotation($.extend {}, annotationObj)
 
     afterEach ->
       Range.sniff.restore()
@@ -393,25 +432,22 @@ describe 'Annotator', ->
       assert.deepEqual(annotation.ranges, [{}])
 
     it "should exclude any ranges that could not be normalized", ->
-      e = new Range.RangeError("typ", "msg")
+      e = new Range.RangeError("msg", serializedRange, "typ")
       sniffedRange.normalize.throws(e)
-      annotation = annotator.setupAnnotation({
-        text: comment,
-        ranges: [1]
-      })
-
+      annotation = annotator.setupAnnotation(annotationObj)
       assert.deepEqual(annotation.ranges, [])
 
     it "should trigger rangeNormalizeFail for each range that can't be normalized", ->
-      e = new Range.RangeError("typ", "msg")
+      e = new Range.RangeError("msg", serializedRange, "typ")
       sniffedRange.normalize.throws(e)
       annotator.publish = sinon.spy()
-      annotation = annotator.setupAnnotation({
-        text: comment,
-        ranges: [1]
-      })
-
-      assert.isTrue(annotator.publish.calledWith('rangeNormalizeFail', [annotation, 1, e]))
+      annotation = annotator.setupAnnotation(annotationObj)
+      assert.isTrue(
+        annotator.publish.calledWith(
+          'rangeNormalizeFail',
+          [annotation, serializedRange, e]
+        )
+      )
 
     it "should call Annotator#highlightRange() with the normed range", ->
       assert.isTrue(annotator.highlightRange.calledWith(normalizedRange))
@@ -437,7 +473,9 @@ describe 'Annotator', ->
         text: "my annotation comment"
         highlights: $('<span><em>Hats</em></span><span><em>Gloves</em></span>')
       }
-      div = $('<div />').append(annotation.highlights)
+      div = $('<div />')
+      div.prependTo(annotator.wrapper)
+      annotation.highlights.appendTo(div)
 
     it "should remove the highlights from the DOM", ->
       annotation.highlights.each ->
@@ -502,7 +540,7 @@ describe 'Annotator', ->
       textNodes = (document.createTextNode(text) for text in ['hello', 'world'])
       mockRange =
         textNodes: -> textNodes
-
+      annotator.wrapper.prepend(textNodes)
       elements = annotator.highlightRange(mockRange)
       assert.lengthOf(elements, 2)
       assert.equal(elements[0].className, 'annotator-hl')
@@ -513,7 +551,7 @@ describe 'Annotator', ->
       textNodes = (document.createTextNode(text) for text in ['hello', '\n ', '      '])
       mockRange =
         textNodes: -> textNodes
-
+      annotator.wrapper.prepend(textNodes)
       elements = annotator.highlightRange(mockRange)
       assert.lengthOf(elements, 1)
       assert.equal(elements[0].className, 'annotator-hl')
@@ -523,7 +561,7 @@ describe 'Annotator', ->
       textNodes = (document.createTextNode(text) for text in ['hello', 'world'])
       mockRange =
         textNodes: -> textNodes
-
+      annotator.wrapper.prepend(textNodes)
       elements = annotator.highlightRange(mockRange, 'monkeys')
       assert.equal(elements[0].className, 'monkeys')
 
@@ -532,6 +570,7 @@ describe 'Annotator', ->
       textNodes = (document.createTextNode(text) for text in ['hello', 'world'])
       mockRange =
         textNodes: -> textNodes
+      annotator.wrapper.prepend(textNodes)
       ranges = [mockRange, mockRange, mockRange]
       elements = annotator.highlightRanges(ranges)
       assert.lengthOf(elements, 6)
@@ -541,6 +580,7 @@ describe 'Annotator', ->
       textNodes = (document.createTextNode(text) for text in ['hello', 'world'])
       mockRange =
         textNodes: -> textNodes
+      annotator.wrapper.prepend(textNodes)
       ranges = [mockRange, mockRange, mockRange]
       elements = annotator.highlightRanges(ranges, 'monkeys')
       assert.equal(elements[0].className, 'monkeys')
@@ -859,7 +899,7 @@ describe 'Annotator', ->
       sinon.stub(Range, 'sniff').returns(sniffedRange)
       sinon.stub(annotator, 'highlightRange').returns(element)
       sinon.spy(element, 'addClass')
-      annotator.selectedRanges = ['foo']
+      annotator.selectedRanges = [normalizedRange]
       annotator.onAdderClick()
 
     afterEach ->
@@ -953,6 +993,11 @@ describe "Annotator.noConflict()", ->
     assert.equal(result, _Annotator)
 
 describe "Annotator.supported()", ->
+  oldSelected = null
+
+  beforeEach -> oldSelected = window.getSelection
+  afterEach -> window.getSelection = oldSelected
+
   it "should return true if the browser has window.getSelection method", ->
     window.getSelection = ->
     assert.isTrue(Annotator.supported())
