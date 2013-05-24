@@ -385,6 +385,7 @@ describe 'Annotator', ->
     annotationObj = null
     normalizedRange = null
     sniffedRange = null
+    serializedRange = null
 
     beforeEach ->
       quote   = 'This is some annotated text'
@@ -398,15 +399,19 @@ describe 'Annotator', ->
       sniffedRange = {
         normalize: sinon.stub().returns(normalizedRange)
       }
+      serializedRange = type: "RangeSelector"
       sinon.stub(Range, 'sniff').returns(sniffedRange)
       sinon.stub(annotator, 'highlightRange').returns(element)
       sinon.spy(annotator, 'publish')
 
       annotationObj = {
         text: comment,
-        ranges: [1]
+        target: [
+          selector: [serializedRange]
+        ]
       }
-      annotation = annotator.setupAnnotation(annotationObj)
+
+      annotation = annotator.setupAnnotation($.extend {}, annotationObj)
 
     afterEach ->
       Range.sniff.restore()
@@ -426,25 +431,22 @@ describe 'Annotator', ->
       assert.deepEqual(annotation.ranges, [{}])
 
     it "should exclude any ranges that could not be normalized", ->
-      e = new Range.RangeError("typ", "msg")
+      e = new Range.RangeError("msg", serializedRange, "typ")
       sniffedRange.normalize.throws(e)
-      annotation = annotator.setupAnnotation({
-        text: comment,
-        ranges: [1]
-      })
-
+      annotation = annotator.setupAnnotation(annotationObj)
       assert.deepEqual(annotation.ranges, [])
 
     it "should trigger rangeNormalizeFail for each range that can't be normalized", ->
-      e = new Range.RangeError("typ", "msg")
+      e = new Range.RangeError("msg", serializedRange, "typ")
       sniffedRange.normalize.throws(e)
       annotator.publish = sinon.spy()
-      annotation = annotator.setupAnnotation({
-        text: comment,
-        ranges: [1]
-      })
-
-      assert.isTrue(annotator.publish.calledWith('rangeNormalizeFail', [annotation, 1, e]))
+      annotation = annotator.setupAnnotation(annotationObj)
+      assert.isTrue(
+        annotator.publish.calledWith(
+          'rangeNormalizeFail',
+          [annotation, serializedRange, e]
+        )
+      )
 
     it "should call Annotator#highlightRange() with the normed range", ->
       assert.isTrue(annotator.highlightRange.calledWith(normalizedRange))

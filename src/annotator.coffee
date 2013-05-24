@@ -379,38 +379,30 @@ class Annotator extends Delegator
   findAnchorFromRangeSelector: (target) ->
     selector = this.findSelector target.selector, "RangeSelector"
     unless selector? then return null
-    try
-      # Try to apply the saved XPath
-      normalizedRange = Range.sniff(selector).normalize @wrapper[0]
-      # Look up the saved quote
-      savedQuote = this.getQuoteForTarget target
-      if savedQuote?
-        # We have a saved quote, let's compare it to current content
-        startInfo = @domMapper.getInfoForNode normalizedRange.start
-        startOffset = startInfo.start
-        endInfo = @domMapper.getInfoForNode normalizedRange.end
-        endOffset = endInfo.end
-        content = @domMapper.getContentForCharRange startOffset, endOffset
-        currentQuote = this.normalizeString content
-        if currentQuote isnt savedQuote
-          console.log "Could not apply XPath selector to current document \
-            because the quote has changed. (Saved quote is '#{savedQuote}'. \
-            Current quote is '#{currentQuote}'.)"
-          return null
-        else
-          console.log "Saved quote matches."
-      else
-        console.log "No saved quote, nothing to compare. Assume that it's OK."
-      range: normalizedRange
-      quote: savedQuote
-    catch exception
-      if exception instanceof Range.RangeError
-        console.log "Could not apply XPath selector to current document. \
-          The document structure may have changed."
-        null
-      else
-        throw exception
 
+    # Try to apply the saved XPath
+    normalizedRange = Range.sniff(selector).normalize @wrapper[0]
+    # Look up the saved quote
+    savedQuote = this.getQuoteForTarget target
+    if savedQuote?
+      # We have a saved quote, let's compare it to current content
+      startInfo = @domMapper.getInfoForNode normalizedRange.start
+      startOffset = startInfo.start
+      endInfo = @domMapper.getInfoForNode normalizedRange.end
+      endOffset = endInfo.end
+      content = @domMapper.getContentForCharRange startOffset, endOffset
+      currentQuote = this.normalizeString content
+      if currentQuote isnt savedQuote
+        console.log "Could not apply XPath selector to current document \
+          because the quote has changed. (Saved quote is '#{savedQuote}'. \
+          Current quote is '#{currentQuote}'.)"
+        return null
+      else
+        console.log "Saved quote matches."
+    else
+      console.log "No saved quote, nothing to compare. Assume that it's OK."
+    range: normalizedRange
+    quote: savedQuote
 
   # Try to determine the anchor position for a target
   # using the saved position selector. The quote is verified.
@@ -539,25 +531,35 @@ class Annotator extends Delegator
     console.log "Trying to find anchor for target: "
     console.log target
 
-    # Simple strategy based on DOM Range
-    anchor = this.findAnchorFromRangeSelector target
+    strategies = [
+      # Simple strategy based on DOM Range
+      this.findAnchorFromRangeSelector
 
-    # Position-based strategy. (The quote is verified.)
-    # This can handle document structure changes,
-    # but not the content changes.
-    anchor ?= this.findAnchorFromPositionSelector target
+      # Position-based strategy. (The quote is verified.)
+      # This can handle document structure changes,
+      # but not the content changes.
+      this.findAnchorFromPositionSelector
 
-    # Two-phased fuzzy text matching strategy. (Using context and quote.)
-    # This can handle document structure changes,
-    # and also content changes.
-    anchor ?= this.findAnchorWithTwoPhaseFuzzyMatching target
+      # Two-phased fuzzy text matching strategy. (Using context and quote.)
+      # This can handle document structure changes,
+      # and also content changes.
+      this.findAnchorWithTwoPhaseFuzzyMatching
 
-    # Naive fuzzy text matching strategy. (Using only the quote.)
-    # This can handle document structure changes,
-    # and also content changes.
-    anchor ?= this.findAnchorWithFuzzyMatching target
+      # Naive fuzzy text matching strategy. (Using only the quote.)
+      # This can handle document structure changes,
+      # and also content changes.
+      this.findAnchorWithFuzzyMatching
+    ]
 
-    anchor
+    error = null
+    anchor = null
+    for fn in strategies
+      try
+        anchor ?= fn.call this, target
+      catch error
+        unless error instanceof Range.RangeError
+          throw error
+    {error, anchor}
 
   # Public: Initialises an annotation either from an object representation or
   # an annotation created with Annotator#createAnnotation(). It finds the

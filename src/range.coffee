@@ -102,7 +102,7 @@ Range.nodeFromXPath = (xpath, root=document) ->
     node
 
 class Range.RangeError extends Error
-  constructor: (@type, @message, @parent=null) ->
+  constructor: (@message, @range, @type, @parent=null) ->
     super(@message)
 
 # Public: Creates a wrapper around a range object obtained from a DOMSelection.
@@ -394,10 +394,12 @@ class Range.SerializedRange
       try
         node = Range.nodeFromXPath(xpath, root)
       catch e
-        throw new Range.RangeError(p, "Error while finding #{p} node: #{xpath}: " + e, e)
+        throw new Range.RangeError(
+          "Error while finding #{p} node: #{xpath}: #{e}", range, p, e
+        )
 
       if not node
-        throw new Range.RangeError(p, "Couldn't find #{p} node: #{xpath}")
+        throw new Range.RangeError("Couldn't find #{p} node: #{xpath}", range, p)
 
       # Unfortunately, we *can't* guarantee only one textNode per
       # elementNode, so we have to walk along the element's textNodes until
