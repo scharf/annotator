@@ -25,7 +25,7 @@ class _Task
 
     @dfd._notify = @dfd.notify
     @dfd.notify = (data) =>
-      @dfd._notify $.extend data, task: this, taskName: @_name
+      @dfd._notify $.extend data, task: this
 
     # Rename resolve to _resolve, so that nobody calls it by accident.
     @dfd._resolve = @dfd.resolve
@@ -82,7 +82,7 @@ class _Task
     unless @_depsResolved?
       throw Error "Dependencies are not resolved for task '"+ @_name +"'!"
     for dep in @_depsResolved
-      unless dep.isResolved()
+      unless dep.state() is "resolved"
         @log.debug "What am I doing here? Out of the " +
           @_depsResolved.length + " dependencies, '" + dep._name +
           "' for the current task '" + @_name +
@@ -112,13 +112,14 @@ class _TaskGen
     @todo = info.code
     @count = 0
 
-  create: (info) ->
+  create: (info, useDefaultProgress = true) ->
     @count += 1
-    @manager.create
+    instanceInfo =
       name: @name + " #" + @count + ": " + info.instanceName
       code: @todo
       deps: info.deps
       data: info.data  
+    @manager.create instanceInfo, useDefaultProgress
 
 class _CompositeTask extends _Task
   constructor: (info) ->
@@ -175,6 +176,10 @@ class _CompositeTask extends _Task
       this._finished() unless @pendingSubTasks
         
     task.progress (info) =>
+      unless info.task?
+        console.log "Progress info from sub-task:"
+        console.log info
+
       task = info.task
       delete info.task
       return if task is @trigger
@@ -200,6 +205,9 @@ class _CompositeTask extends _Task
     task = @manager.create info, false
     this.addSubTask weight: w, task: task
     task
+
+  createDummySubTask: (info) ->
+    this.addSubTask weight: 0, task: @manager.createDummy info, false
 
 class TaskManager
   constructor: (name) ->
@@ -231,9 +239,9 @@ class TaskManager
         task.progress cb
     task
 
-  createDummy: (info) ->
+  createDummy: (info, useDefaultProgress = true) ->
     info.code = (task) -> task.ready()
-    this.create info  
+    this.create info, useDefaultProgress  
 
   createGenerator: (info) ->
     info.manager = this

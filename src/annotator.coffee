@@ -101,7 +101,7 @@ class Annotator extends Delegator
     super
     givenName = options?.annotatorName ? "Annotator"
     @log ?= getXLogger givenName
-    @log.info "Annotator constructor running."
+    @log.info "Annotator constructor running with options", options
     myName = @log.name
 
     @tasklog ?= getXLogger myName + " tasks"
@@ -119,7 +119,7 @@ class Annotator extends Delegator
     @domMapper = new DomTextMapper myName + " mapper"
     @domMatcher = new DomTextMatcher @domMapper, myName + " matcher"
 
-    @tasks = new TaskManager "Annotator"
+    @tasks = new TaskManager myName
     @tasks.addDefaultProgress (info) => this.defaultNotify info
 
     unless @options.noInit
@@ -139,11 +139,11 @@ class Annotator extends Delegator
     # Set up CSS styles
     this._setupDynamicStyle()
 
-    # Initialize various UI elements
-    this._setupViewer()._setupEditor()
-
     # Initialize wrapper
     this._setupWrapper()
+
+    # Initialize various UI elements
+    this._setupViewer()._setupEditor()
 
     # Create adder
     this.adder = $(this.html.adder).appendTo(@wrapper).hide()
@@ -187,6 +187,9 @@ class Annotator extends Delegator
     @init.createSubTask
       weight: 1
       name: "viewer & editor"
+      # Not sure why, but if we setup the editor without the wrapper,
+      # it will not show.
+      deps: ["wrapper"]
       code: (task) =>
         this._setupViewer()._setupEditor()
         task.ready()
@@ -200,12 +203,13 @@ class Annotator extends Delegator
 
     if @options.noScan
       # We were instructed to skip initial DOM scan        
-      scan = @tasks.createDummy name: "Skipping scan"
+      scan = @init.createDummySubTask name: "Skipping scan"
     else
-      scan = @_scanGen.create
+      info =
         instanceName: "Initial scan"
         # Scanning requires a configured wrapper
         deps: ["wrapper"]
+      scan = @_scanGen.create info, false
 
     @init.addSubTask weight: 20, task: scan
 
@@ -224,11 +228,11 @@ class Annotator extends Delegator
     info.progress ?= 0
     num = Math.round ( 100 * info.progress )
     progressText = num.toString() + "%"
-    @tasklog.debug info.taskName + ": " + progressText + " - " + info.text
+    @tasklog.debug info.task._name + ": " + progressText + " - " + info.text
 
   initAsync: ->
+    @asyncMode = true        
     this.defineAsyncInitTasks()
-    @asyncMode = true
     @tasks.schedule()
 
   # Perform a sync scan of the DOM. Required for finding anchors.
@@ -859,7 +863,7 @@ class Annotator extends Delegator
   #
   # Returns itself to allow chaining.
   addPlugin: (name, options) ->
-    @tasklog.debug "Loading plugin '" + name + "'..."
+    @log.info "Loading plugin '" + name + "'..."
     if @plugins[name]
       @log.error _t("You cannot have more than one instance of any plugin.")
     else
@@ -875,6 +879,7 @@ class Annotator extends Delegator
           taskInfo = plugin.initTaskInfo
 
           if (not taskInfo?) and plugin.pluginInit?
+            @tasklog.trace "Plugin '" + name + "' does not have initTaskInfo. Creating init task around the synchronous pluginInit() method."
             # At least we have a synchronous init method.
             # Let's wrap a task around that!
             taskInfo =
