@@ -888,6 +888,7 @@ describe 'Annotator', ->
       }
       sniffedRange = {
         normalize: sinon.stub().returns(normalizedRange)
+        serialize: sinon.stub().returns('foo')
       }
 
       sinon.stub(annotator.adder, 'hide')
