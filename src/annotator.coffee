@@ -99,13 +99,14 @@ class Annotator extends Delegator
   # Returns a new instance of the Annotator.
   constructor: (element, options) ->
     super
-    @log = getXLogger "Annotator"
+    @log ?= getXLogger options?.annotatorName ? "Annotator"
+    @log.info "Annotator constructor running."
 
-    @tasklog = getXLogger "Annotator tasks"
+    @tasklog ?= getXLogger @log.name + " tasks"
     # Uncomment this if you feel like debugging async task management
     # @tasklog.setLevel XLOG_LEVEL.DEBUG
 
-    @alog = getXLogger "Annotator anchoring"
+    @alog = getXLogger @log.name + " anchoring"
     # Uncomment this if you feel like debugging anchoring
     # @alog.setLevel XLOG_LEVEL.DEBUG
 
