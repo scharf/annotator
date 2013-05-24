@@ -57,7 +57,7 @@ class Annotator extends Delegator
 
   viewer: null
 
-  selectedTargets: null
+  selectedRanges: null
 
   mouseIsDown: false
 
@@ -583,9 +583,11 @@ class Annotator extends Delegator
   # Returns the initialised annotation.
   setupAnnotation: (annotation) ->
     root = @wrapper[0]
-    annotation.target or= @selectedTargets
+    annotation.target or=
+      selector: (this.getRangeSelector(r) for r in @selectedRanges or [])
+      source: this.getHref()
     unless annotation.target?
-      throw new Error "Can not run setupAnnotation(), since @selectedTargets is null!"
+      throw new Error "Can not run setupAnnotation(). No target or selection available."
 
     unless annotation.target instanceof Array
       annotation.target = [annotation.target]
@@ -595,10 +597,12 @@ class Annotator extends Delegator
 
     for t in annotation.target
       try
-        anchor = this.findAnchor t
-        t.quote = anchor.quote
-        t.diffHTML = anchor.diffHTML
-        if anchor?.range?
+        {anchor, error} = this.findAnchor t
+        if error instanceof Range.RangeError
+          this.publish('rangeNormalizeFail', [annotation, error.range, error])
+        if anchor?
+          t.quote = anchor.quote or $.trim(anchor.range.text())
+          t.diffHTML = anchor.diffHTML
           normedRanges.push anchor.range
           annotation.quote.push t.quote
         else
@@ -874,23 +878,15 @@ class Annotator extends Delegator
       return
 
     # Get the currently selected ranges.
-    try
-      @selectedTargets = this.getSelectedTargets()
-    catch exception
-      console.log "Error while checking selection:"
-      console.log exception.stack
-      alert "There is something very strange about the current selection. Sorry, but I can not annotate this."
-      return
+    @selectedRanges = this.getSelectedRanges()
 
-    for target in @selectedTargets
-      selector = this.findSelector target.selector, "RangeSelector"
-      range = (Range.sniff selector).normalize @wrapper[0]
+    for range in @selectedRanges
       container = range.commonAncestor
       if $(container).hasClass('annotator-hl')
         container = $(container).parents(':not([class^=annotator-hl])')[0]
       return if this.isAnnotator(container)
 
-    if event and @selectedTargets.length
+    if event and @selectedRanges.length
       @adder
         .css(util.mousePosition(event, @wrapper[0]))
         .show()

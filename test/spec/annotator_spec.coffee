@@ -304,20 +304,24 @@ describe 'Annotator', ->
       mockBrowserRange.cloneRange.returns(mockBrowserRange)
 
       mockSerializedRange = {
-        normalize: jasmine.createSpy('BrowserRange#normalize()')
+        normalize: sinon.spy()
+        startContainer: '/div[1]/p[1]'
+        endContainer: '/div[1]/p[1]'
+        startOffset: 0
+        endOffset: 10
       }
 
       mockRange = {
         limit: sinon.stub()
         normalize: sinon.stub()
         toRange: sinon.stub().returns('range')
-        serialize: jasmine.createSpy('NormalizedRange#serialize()').andReturn(mockSerializedRange)
+        serialize: sinon.stub()
         start: paraText
         end: paraText2
       }
       mockRange.limit.returns(mockRange)
       mockRange.normalize.returns(mockRange)
-      mockSerializedRange.normalize.andReturn(mockRange)
+      mockRange.serialize.returns(mockSerializedRange)
 
       # https://developer.mozilla.org/en/nsISelection
       mockSelection = {
@@ -336,17 +340,14 @@ describe 'Annotator', ->
       util.getGlobal.restore()
       Range.BrowserRange.restore()
 
-    it "should retrieve the global object and call getSelection() and serialize() 1", ->
-      annotator.getSelectedTargets()
+    it "should retrieve the global object and call getSelection() and serialize()", ->
+      annotator.getSelectedRanges()
       assert(mockGlobal.getSelection.calledOnce)
       assert(mockRange.serialize.calledOnce)
 
-    it "should retrieve the global object and call getSelection() and serialize() 2", ->
-      targets = annotator.getSelectedTargets()
-      firstTarget = targets[0]
-      selector = this.findSelector firstTarget.selector, "RangeSelector"
-      range = (Range.sniff selector).normalize()
-      assert.equal(range, [mockRange])
+    it "should return the selected ranges", ->
+      ranges = annotator.getSelectedRanges()
+      assert.deepEqual(ranges, [mockRange])
 
     it "should remove any failed calls to NormalizedRange#limit(), but re-add them to the global selection", ->
       mockRange.limit.returns(null)
