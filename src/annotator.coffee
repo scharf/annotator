@@ -583,8 +583,15 @@ class Annotator extends Delegator
   # Returns the initialised annotation.
   setupAnnotation: (annotation) ->
     root = @wrapper[0]
+
+    # Upgrade format from v1.2.6 and earlier
+    ranges = annotation.ranges or @selectedRanges or []
+    unless ranges instanceof Array
+      ranges = [ranges]
+    # End upgrade code
+
     annotation.target or=
-      selector: (this.getRangeSelector(r) for r in @selectedRanges or [])
+      selector: (this.getRangeSelector(Range.sniff(r)) for r in ranges)
       source: this.getHref()
     unless annotation.target?
       throw new Error "Can not run setupAnnotation(). No target or selection available."
