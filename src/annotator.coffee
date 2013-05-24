@@ -99,24 +99,25 @@ class Annotator extends Delegator
   # Returns a new instance of the Annotator.
   constructor: (element, options) ->
     super
-    @log ?= getXLogger options?.annotatorName ? "Annotator"
+    givenName = options?.annotatorName ? "Annotator"
+    @log ?= getXLogger givenName
     @log.info "Annotator constructor running."
+    myName = @log.name
 
-    @tasklog ?= getXLogger @log.name + " tasks"
+    @tasklog ?= getXLogger myName + " tasks"
     # Uncomment this if you feel like debugging async task management
     # @tasklog.setLevel XLOG_LEVEL.DEBUG
 
-    @alog = getXLogger @log.name + " anchoring"
+    @alog = getXLogger myName + " anchoring"
     # Uncomment this if you feel like debugging anchoring
     # @alog.setLevel XLOG_LEVEL.DEBUG
 
     @plugins = {}
 
     # Return early if the annotator is not supported.
-    return this unless Annotator.supported()
-
-    @domMapper = new DomTextMapper()
-    @domMatcher = new DomTextMatcher @domMapper
+    return unless Annotator.supported()
+    @domMapper = new DomTextMapper myName + " mapper"
+    @domMatcher = new DomTextMatcher @domMapper, myName + " matcher"
 
     @tasks = new TaskManager "Annotator"
     @tasks.addDefaultProgress (info) => this.defaultNotify info
