@@ -147,7 +147,7 @@ class Annotator.Plugin.Store extends Annotator.Plugin
       this._apiRequest('create', annotation, (data) =>
         # Update with (e.g.) ID from server.
         if not data.id?
-          console.warn Annotator._t("Warning: No ID returned from server for annotation "), annotation
+          @annotator.log.warn Annotator._t("Warning: No ID returned from server for annotation "), annotation
         this.updateAnnotation annotation, data
       )
     else
@@ -236,7 +236,7 @@ class Annotator.Plugin.Store extends Annotator.Plugin
   # Returns nothing.
   updateAnnotation: (annotation, data) ->
     if annotation not in this.annotations
-      console.error Annotator._t("Trying to update unregistered annotation!")
+      @annotator.log.error Annotator._t("Trying to update unregistered annotation!")
     else
       $.extend(annotation, data)
 
@@ -496,7 +496,7 @@ class Annotator.Plugin.Store extends Annotator.Plugin
 
     Annotator.showNotification message, Annotator.Notification.ERROR
 
-    console.error Annotator._t("API request failed:") + " '#{xhr.status}'"
+    @annotator.log.error Annotator._t("API request failed:") + " '#{xhr.status}'"
     # Are were in the middle of an async init process?
     if @initTask?.state() is "pending"
       # We must signal that the task has failed.

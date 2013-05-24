@@ -129,7 +129,7 @@ class Annotator extends Delegator
     null
         
   initSync: ->
-#    console.log "Doing sync init."
+    @log.debug "Doing sync init."
 
     @_init = new jQuery.Deferred()
     @init = @_init.promise()
@@ -527,14 +527,14 @@ class Annotator extends Delegator
       content = @domMapper.getContentForCharRange selector.start, selector.end
       currentQuote = this.normalizeString content
       if currentQuote isnt savedQuote
-        console.log "Could not apply position selector to current document \
+        @alog.debug "Could not apply position selector to current document \
           because the quote has changed. (Saved quote is '#{savedQuote}'. \
           Current quote is '#{currentQuote}'.)"
         return null
       else
-        console.log "Saved quote matches."
+        @alog.debug "Saved quote matches."
     else
-      console.log "No saved quote, nothing to compare. Assume that it's okay."
+      @alog.debug "No saved quote, nothing to compare. Assume that it's okay."
 
     # OK, we have everything. Create a range from this.
     mappings = this.domMapper.getMappingsForCharRange selector.start,
@@ -568,13 +568,12 @@ class Annotator extends Delegator
 
     # If we did not got a result, give up
     unless result.matches.length
-      console.log "Fuzzy matching did not return any results. Giving up on two-phase strategy."
+      @alog.debug "Fuzzy matching did not return any results. Giving up on two-phase strategy."
       return null
 
     # here is our result
     match = result.matches[0]
-    console.log "Fuzzy found match:"
-    console.log match
+    @alog.debug "Fuzzy found match:", match
 
     # convert it to a Range
     browserRange = new Range.BrowserRange match.realRange
@@ -614,13 +613,12 @@ class Annotator extends Delegator
 
     # If we did not got a result, give up
     unless result.matches.length
-      console.log "Fuzzy matching did not return any results. Giving up on one-phase strategy."
+      @alog.debug "Fuzzy matching did not return any results. Giving up on one-phase strategy."
       return null
 
     # here is our result
     match = result.matches[0]
-    console.log "Fuzzy found match:"
-    console.log match
+    @alog.debug "Fuzzy found match:", match
 
     # convert it to a Range
     browserRange = new Range.BrowserRange match.realRange
@@ -798,7 +796,7 @@ class Annotator extends Delegator
     if @plugins['Store']
       @plugins['Store'].dumpAnnotations()
     else
-      console.warn(_t("Can't dump annotations without Store plugin."))
+      @log.warn(_t("Can't dump annotations without Store plugin."))
 
   # Public: Wraps the DOM Nodes within the provided range with a highlight
   # element of the specified class and returns the highlight Elements.
@@ -859,8 +857,9 @@ class Annotator extends Delegator
   #
   # Returns itself to allow chaining.
   addPlugin: (name, options) ->
+    @tasklog.debug "Loading plugin '" + name + "'..."
     if @plugins[name]
-      console.error _t("You cannot have more than one instance of any plugin.")
+      @log.error _t("You cannot have more than one instance of any plugin.")
     else
       klass = Annotator.Plugin[name]
       if typeof klass is 'function'
@@ -904,7 +903,7 @@ class Annotator extends Delegator
           @log.debug "Synchronously initing plugin '" + name + "'."
           @plugins[name].pluginInit?()
       else
-        console.error _t("Could not load ") + name + _t(" plugin. Have you included the appropriate <script> tag?")
+        @log.error _t("Could not load ") + name + _t(" plugin. Have you included the appropriate <script> tag?")
     this # allow chaining
 
   # Public: Loads the @editor with the provided annotation and updates its
@@ -1010,8 +1009,7 @@ class Annotator extends Delegator
     try
       @selectedTargets = this.getSelectedTargets()
     catch exception
-      console.log "Error while checking selection:"
-      console.log exception.stack
+      @alog.error "While checking selection:", exception
       alert "There is something very strange about the current selection. Sorry, but I can not annotate this."
       return
 

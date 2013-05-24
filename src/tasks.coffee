@@ -13,6 +13,7 @@ class _Task
     unless info.code?
       throw new Error "Trying to define task with no code!"
     @manager = info.manager
+    @log = @manager.log
     @taskID = this.uniqueId()
     @_name = info.name
     @_todo = info.code
@@ -66,25 +67,23 @@ class _Task
       @_deps.push dep
 
   removeDeps: (toRemove) ->
-    console.log "Should remove:"
-    console.log toRemove        
+    @log.debug "Should remove:", toRemove
     unless Array.isArray toRemove then toRemove = [toRemove]
     @_deps = @_deps.filter (dep) -> dep not in toRemove
-#    console.log "Deps now:"
-#    console.log @_deps
+    @log.debug "Deps now:",@_deps
 
   resolveDeps: ->
     @_depsResolved = ((if typeof dep is "string" then @manager.lookup dep else dep) for dep in @_deps)
 
   _start: =>
     if @started
-#      console.log "This task ('" + @_name + "') has already been started!"
+      @log.debug "This task ('" + @_name + "') has already been started!"
       return
     unless @_depsResolved?
       throw Error "Dependencies are not resolved for task '"+ @_name +"'!"
     for dep in @_depsResolved
       unless dep.isResolved()
-        console.log "What am I doing here? Out of the " +
+        @log.debug "What am I doing here? Out of the " +
           @_depsResolved.length + " dependencies, '" + dep._name +
           "' for the current task '" + @_name +
           "' has not yet been resolved!"
@@ -216,10 +215,9 @@ class TaskManager
   _checkName: (info) ->
     name = info?.name
     unless name?
-      console.log info
       throw new Error "Trying to create a task without a name!"
     if @tasks[name]?
-      console.log "Warning: overriding existing task '" + name +
+      @log.info "Overriding existing task '" + name +
         "' with new definition!"
     name
 
@@ -255,7 +253,7 @@ class TaskManager
   removeDeps: (from, to) -> (@lookup from).removeDeps to
 
   removeAllDepsTo: (to) ->
-    console.log "a"      
+    throw new Error "Not yet implemented."
 
   lookup: (name) ->
     result = @tasks[name]
