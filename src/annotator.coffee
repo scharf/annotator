@@ -95,8 +95,9 @@ class Annotator extends Delegator
     # Return early if the annotator is not supported.
     return this unless Annotator.supported()
     this._setupDocumentEvents() unless @options.readOnly
+    this._setupWrapper()
     this._setupMatching() unless @options.noMatching
-    this._setupWrapper()._setupViewer()._setupEditor()
+    this._setupViewer()._setupEditor()
     this._setupDynamicStyle()
 
     # Perform initial DOM scan, unless told not to.
@@ -110,6 +111,7 @@ class Annotator extends Delegator
         
     @domMapper = new DomTextMapper()
     @domMatcher = new DomTextMatcher @domMapper
+    @domMapper.setRootNode @wrapper[0]
 
     this
 
@@ -131,7 +133,6 @@ class Annotator extends Delegator
     @element.find('script').remove()
     @element.wrapInner(@wrapper)
     @wrapper = @element.find('.annotator-wrapper')
-    @domMapper.setRootNode @wrapper[0]
 
     this
 

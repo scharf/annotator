@@ -4,9 +4,9 @@ describe 'Annotator', ->
 
   beforeEach ->
     annotator = new Annotator($('<div></div>')[0], {})
-    annotator._setupMatching()
 
   afterEach  -> $(document).unbind()
+    window.DomTextMapper.instances = []
 
   describe "events", ->
     it "should call Annotator#onAdderClick() when adder is clicked", ->
