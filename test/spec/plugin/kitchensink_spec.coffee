@@ -65,7 +65,7 @@ describe 'Annotator::setupPlugins', ->
       sinon.stub(Annotator.Plugin.Store.prototype, 'pluginInit')
 
       annotator = new Annotator(fix())
-      annotator.setupPlugins()
+      annotator.setupPlugins({}, {Filter: {appendTo: fix()}})
 
     afterEach ->
       Annotator.Plugin.Store.prototype.pluginInit.restore()
