@@ -899,7 +899,7 @@ describe 'Annotator', ->
       sinon.stub(Range, 'sniff').returns(sniffedRange)
       sinon.stub(annotator, 'highlightRange').returns(element)
       sinon.spy(element, 'addClass')
-      annotator.selectedRanges = ['foo']
+      annotator.selectedRanges = [normalizedRange]
       annotator.onAdderClick()
 
     afterEach ->
