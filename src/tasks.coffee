@@ -149,7 +149,11 @@ class _CompositeTask extends _Task
     if @failedSubTasks
       @dfd.failed()        
     else
-      @dfd.ready()    
+      @dfd.ready()
+
+  _deleteSubTask: (taskID) ->
+    delete @subTasks[taskID]
+    @pendingSubTasks -= 1
 
   addSubTask: (info) ->
     weight = info.weight
@@ -160,6 +164,7 @@ class _CompositeTask extends _Task
       throw new Error "Trying to add subTask with no task!"
     if @trigger? then task.addDeps @trigger
     @subTasks[task.taskID] =
+      name: task._name
       weight: weight
       progress: 0
       text: "no info about this subtask"
@@ -201,9 +206,18 @@ class _CompositeTask extends _Task
 
     task
 
+  _getSubTaskIdByName: (name) ->
+    id for id, info of @subTasks when info.name is name
+        
   createSubTask: (info) ->
     w = info.weight
-    delete info.weight        
+    delete info.weight
+
+    oldSubTaskID = this._getSubTaskIdByName info.name
+    if oldSubTaskID?
+      @log.debug "When defining sub-task '" + info.name + "', overriding this existing sub-task: " + oldSubTaskID
+      this._deleteSubTask oldSubTaskID
+
     this.addSubTask
       weight: w
       task: @manager.create info, false
@@ -295,3 +309,30 @@ class TaskManager
 
     null
 
+  dumpPending: () ->
+    failed = (name for name, task of @tasks when task.state() is "rejected")
+    @log.info "Failed tasks:", failed
+
+    resolved = (name for name, task of @tasks when task.state() is "resolved")
+    @log.info "Finished tasks:", resolved
+
+    running = (name for name, task of @tasks when task.state() is "pending" and task.started)
+    @log.info "Currently running tasks:", running
+
+    @log.info "Waiting tasks:"
+    for name, task of @tasks when not task.started
+      t = "Task '" + name + "'"
+      @log.info "Analyzing waiting " + t
+      try
+        deps = task.resolveDeps()
+        if deps.length is 0 and not task.started
+          @log.info t + " has no dependencies; just nobody has started it. Schedule() ? "
+        else
+          pending = []
+          for dep in deps
+            if dep.state() is "pending"
+              pending.push dep._name
+          @log.info t + ": pending dependencies: ", pending    
+        
+      catch exception
+        @log.info t + " has unresolved dependencies", exception
