@@ -1,4 +1,11 @@
-# Rudementary logging stuff
+# Rudementary logging framework
+# to be used in
+#  * dom-text-mapper
+#  * dom-text-matcher
+#  * Annotator
+#  * Hypothes.is
+#
+# (And whatever else who finds it useful.)
 
 window.XLOG_LEVEL =
   ERROR: 5
@@ -20,7 +27,11 @@ class XLogger
 
   currentTimestamp: -> new Date().getTime()
 
-  elapsedTime: -> @currentTimestamp() - window.loggerStartTime
+  elapsedTime: ->
+    if XLoggerStartTime?
+      @currentTimestamp() - XLoggerStartTime
+    else
+      "???"
 
   time: -> "[" + @elapsedTime() + " ms]"
 
@@ -28,7 +39,9 @@ class XLogger
     if level >= @level
       time = @time()
       for obj in objects
-        text = if obj instanceof Error
+        text = unless obj?
+          "null"
+        else if obj instanceof Error
           obj.stack
         else
           JSON.stringify obj, null, 2
@@ -42,6 +55,6 @@ class XLogger
   debug: (objects...) -> this._log XLOG_LEVEL.DEBUG, objects
   trace: (objects...) -> this._log XLOG_LEVEL.TRACE, objects
 
-window.loggerStartTime = new Date().getTime()
+window.XLoggerStartTime ?= new Date().getTime()
 
 window.getXLogger ?= (name) -> new XLogger(name)
