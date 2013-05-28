@@ -288,47 +288,22 @@ class Annotator extends Delegator
   #
   # Returns Array of NormalizedRange instances.
   getSelectedRanges: ->
-    for target in this.getSelectedTargets()
-      range = this.findSelector target.selector, "RangeSelector"
-      unless range? then continue
-      Range.sniff(range).normalize(@wrapper[0])
-
-  # Public: Gets the current selection excluding any nodes that fall outside of
-  # the @wrapper. Then returns an Array of annotation targets which are objects
-  # containing a source URI and an array of resource selectors.
-  #
-  # Returns Array of Object instances with `source` and `selector` keys.
-  getSelectedTargets: ->
-    unless @domMapper?
-      throw new Error "Can not execute getSelectedTargets() before _setupMatching()!"
-    unless @wrapper
-      throw new Error "Can not execute getSelectedTargets() before @wrapper is configured!"
     selection = util.getGlobal().getSelection()
-    source = this.getHref()
 
-    targets = []
     ranges = []
     rangesToIgnore = []
     unless selection.isCollapsed
-      targets = for i in [0...selection.rangeCount]
-        realRange = selection.getRangeAt i
-        browserRange = new Range.BrowserRange realRange
-        normedRange = browserRange.normalize().limit @wrapper[0]
+      ranges = for i in [0...selection.rangeCount]
+        r = selection.getRangeAt(i)
+        browserRange = new Range.BrowserRange(r)
+        normedRange = browserRange.normalize().limit(@wrapper[0])
 
         # If the new range falls fully outside the wrapper, we
         # should add it back to the document but not return it from
         # this method
-        if normedRange?
-          ranges.push(normedRange)
-          selector: [
-            this.getRangeSelector normedRange
-            this.getTextQuoteSelector normedRange
-            this.getTextPositionSelector normedRange
-          ]
-          source: source
-        else
-          rangesToIgnore.push(realRange)
-          continue
+        rangesToIgnore.push(r) if normedRange is null
+
+        normedRange
 
       # BrowserRange#normalize() modifies the DOM structure and deselects the
       # underlying text as a result. So here we remove the selected ranges and
@@ -344,7 +319,17 @@ class Annotator extends Delegator
       selection.addRange(range.toRange()) if range
       range
 
-    targets
+  # Public: Gets the target identified by the given NormalizedRange.
+  #
+  #
+  # Returns an Object containing a `source` property and a `selector` Array.
+  getTargetFromRange: (range) ->
+    source: this.getHref()
+    selector: [
+      this.getRangeSelector range
+      this.getTextQuoteSelector range
+      this.getTextPositionSelector range
+    ]
 
   # Public: Creates and returns a new annotation object. Publishes the
   # 'beforeAnnotationCreated' event to allow the new annotation to be modified.
@@ -583,21 +568,15 @@ class Annotator extends Delegator
   # Returns the initialised annotation.
   setupAnnotation: (annotation) ->
     root = @wrapper[0]
+    ranges = annotation.ranges or @selectedRanges or []
 
     # Upgrade format from v1.2.6 and earlier
-    ranges = annotation.ranges or @selectedRanges or []
-    unless ranges instanceof Array
-      ranges = [ranges]
-    # End upgrade code
+    if annotation.ranges? then delete annotation.ranges
 
-    annotation.target or=
-      selector: (this.getRangeSelector(Range.sniff(r)) for r in ranges)
-      source: this.getHref()
+    annotation.target or= (this.getTargetFromRange(r) for r in ranges)
+
     unless annotation.target?
       throw new Error "Can not run setupAnnotation(). No target or selection available."
-
-    unless annotation.target instanceof Array
-      annotation.target = [annotation.target]
 
     normedRanges     = []
     annotation.quote = []

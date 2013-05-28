@@ -340,10 +340,9 @@ describe 'Annotator', ->
       util.getGlobal.restore()
       Range.BrowserRange.restore()
 
-    it "should retrieve the global object and call getSelection() and serialize()", ->
+    it "should retrieve the global object and call getSelection()", ->
       annotator.getSelectedRanges()
       assert(mockGlobal.getSelection.calledOnce)
-      assert(mockRange.serialize.calledOnce)
 
     it "should return the selected ranges", ->
       ranges = annotator.getSelectedRanges()
@@ -891,14 +890,24 @@ describe 'Annotator', ->
         serialize: sinon.stub().returns('foo')
       }
 
+      anchor = {
+        range: normalizedRange
+      }
+
+      target = {
+        selector: annotator.getRangeSelector(normalizedRange)
+      }
+
       sinon.stub(annotator.adder, 'hide')
       sinon.stub(annotator.adder, 'position').returns(mockOffset)
       sinon.stub(annotator, 'createAnnotation').returns(annotation)
       sinon.spy(annotator, 'setupAnnotation')
       sinon.stub(annotator, 'deleteAnnotation')
       sinon.stub(annotator, 'showEditor')
-      sinon.stub(Range, 'sniff').returns(sniffedRange)
+      sinon.stub(annotator, 'findAnchor').returns(anchor: anchor)
+      sinon.stub(annotator, 'getTargetFromRange').returns(target)
       sinon.stub(annotator, 'highlightRange').returns(element)
+      sinon.stub(Range, 'sniff').returns(sniffedRange)
       sinon.spy(element, 'addClass')
       annotator.selectedRanges = [normalizedRange]
       annotator.onAdderClick()
