@@ -82,14 +82,14 @@ annotator-bookmarklet.js: $(BOOKMARKLET)
 BOOKMARKLET_CFG_DEP=$(shell [ -f $(BOOKMARKLET_CFG) ] && echo $(BOOKMARKLET_CFG))
 bookmarklet.js: $(BOOKMARKLET_SRC) $(BOOKMARKLET_CFG_DEP)
 	@if [ -r $(BOOKMARKLET_CFG) ]; then \
-	  sed -e "/Leave __config__/d" \
-	      -e "/^__config__$$/{r $(BOOKMARKLET_CFG)" -e 'd;}' \
-	      <$(BOOKMARKLET_SRC) \
-	      >bookmarklet.js; \
+		sed -e "/Leave __config__/d" \
+			-e "/^__config__$$/{r $(BOOKMARKLET_CFG)" -e 'd;}' \
+			<$(BOOKMARKLET_SRC) \
+			>bookmarklet.js; \
 	else \
-	  sed -e "/Leave __config__/d" \
-	      <$(BOOKMARKLET_SRC) \
-	      >bookmarklet.js; \
+		sed -e "/Leave __config__/d" \
+			<$(BOOKMARKLET_SRC) \
+			>bookmarklet.js; \
 	fi
 
 annotator.%.js: plugin/%.coffee
