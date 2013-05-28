@@ -17,6 +17,7 @@ ANNOTATOR=\
 PLUGINS=\
 	plugin/annotateitpermissions.coffee \
 	plugin/auth.coffee \
+	plugin/document.coffee \
 	plugin/filter.coffee \
 	plugin/kitchensink.coffee \
 	plugin/markdown.coffee \
