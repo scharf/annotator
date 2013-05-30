@@ -141,16 +141,18 @@ class Annotator.Plugin.Permissions extends Annotator.Plugin
       this.setUser(@options.user)
       delete @options.user
     else
-      # We need Auth plugin for default user and permissions
-      # Adding this value to the dep file will
-      # make the async plugin init process wait for it.
-      @deps.push "auth token"
+      unless @options.ignoreToken
+        # We need Auth plugin for default user and permissions
+        # Adding this value to the dep file will
+        # make the async plugin init process wait for it.
+        @deps.push "auth token"
 
   # Declared dependencies (for async plugin loading)
   deps: [
     "viewer & editor" # We add stuff to editor
-    # A dependency for the auth plugin is
-    # added in the constructor, if required.
+
+    # Note that a dependency for the auth plugin is
+    # added later, in the constructor, if required.
   ]
 
   # Public: Initializes the plugin and registers fields with the
