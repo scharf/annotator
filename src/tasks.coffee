@@ -97,7 +97,9 @@ class _Task
       try
         @_todo @dfd, @_data
       catch exception
-        @log.error "Error while executing task '" + @_name + "'", exception
+        @log.error "Error while executing task '" + @_name + "': " + exception
+        @log.error exception
+        @dfd.failed "Exception: " + exception.message
 
   _skip: =>
     if @started then return
