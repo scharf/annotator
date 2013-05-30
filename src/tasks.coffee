@@ -224,12 +224,12 @@ class _CompositeTask extends _Task
 
     this.addSubTask
       weight: w
-      task: @manager.create info, false
+      task: @manager.create(info, false)
 
   createDummySubTask: (info) ->
     this.addSubTask
       weight: 0
-      task: @manager.createDummy info, false        
+      task: @manager.createDummy(info, false)
 
 class TaskManager
   constructor: (name) ->
