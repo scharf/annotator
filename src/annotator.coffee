@@ -902,8 +902,8 @@ class Annotator extends Delegator
           # We have the init task. Let's add any extra dependencies
           if options?.deps? then plugin.initTask.addDeps options.deps
 
-          # Let's schedule it!
-          @tasks.schedule()
+          # If the init task is already runnig, then let's reschedule it!
+          if @init.started then @tasks.schedule()
 
         else
           @log.debug "Synchronously initing plugin '" + name + "'."
