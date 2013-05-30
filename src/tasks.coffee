@@ -13,6 +13,7 @@ class _Task
     unless info.code?
       throw new Error "Trying to define task with no code!"
     @manager = info.manager
+    @log = @manager.log
     @taskID = this.uniqueId()
     @_name = info.name
     @_todo = info.code
@@ -23,8 +24,7 @@ class _Task
     @dfd = new jQuery.Deferred()
 
     @dfd._notify = @dfd.notify
-    @dfd.notify = (data) =>
-      @dfd._notify $.extend data, task: this, taskName: @_name
+    @dfd.notify = (data) => @dfd._notify $.extend data, task: this
 
     # Rename resolve to _resolve, so that nobody calls it by accident.
     @dfd._resolve = @dfd.resolve
@@ -66,25 +66,23 @@ class _Task
       @_deps.push dep
 
   removeDeps: (toRemove) ->
-    console.log "Should remove:"
-    console.log toRemove        
+    @log.debug "Should remove:", toRemove
     unless Array.isArray toRemove then toRemove = [toRemove]
     @_deps = @_deps.filter (dep) -> dep not in toRemove
-#    console.log "Deps now:"
-#    console.log @_deps
+    @log.debug "Deps now:",@_deps
 
   resolveDeps: ->
     @_depsResolved = ((if typeof dep is "string" then @manager.lookup dep else dep) for dep in @_deps)
 
   _start: =>
     if @started
-#      console.log "This task ('" + @_name + "') has already been started!"
+      @log.debug "This task ('" + @_name + "') has already been started!"
       return
     unless @_depsResolved?
       throw Error "Dependencies are not resolved for task '"+ @_name +"'!"
     for dep in @_depsResolved
-      unless dep.isResolved()
-        console.log "What am I doing here? Out of the " +
+      unless dep.state() is "resolved"
+        @log.debug "What am I doing here? Out of the " +
           @_depsResolved.length + " dependencies, '" + dep._name +
           "' for the current task '" + @_name +
           "' has not yet been resolved!"
@@ -113,13 +111,14 @@ class _TaskGen
     @todo = info.code
     @count = 0
 
-  create: (info) ->
+  create: (info, useDefaultProgress = true) ->
     @count += 1
-    @manager.create
+    instanceInfo =
       name: @name + " #" + @count + ": " + info.instanceName
       code: @todo
       deps: info.deps
       data: info.data  
+    @manager.create instanceInfo, useDefaultProgress
 
 class _CompositeTask extends _Task
   constructor: (info) ->
@@ -150,7 +149,11 @@ class _CompositeTask extends _Task
     if @failedSubTasks
       @dfd.failed()        
     else
-      @dfd.ready()    
+      @dfd.ready()
+
+  _deleteSubTask: (taskID) ->
+    delete @subTasks[taskID]
+    @pendingSubTasks -= 1
 
   addSubTask: (info) ->
     weight = info.weight
@@ -161,6 +164,7 @@ class _CompositeTask extends _Task
       throw new Error "Trying to add subTask with no task!"
     if @trigger? then task.addDeps @trigger
     @subTasks[task.taskID] =
+      name: task._name
       weight: weight
       progress: 0
       text: "no info about this subtask"
@@ -177,10 +181,15 @@ class _CompositeTask extends _Task
         
     task.progress (info) =>
       task = info.task
-      delete info.task
+
+      # The trigger is a library internal thing.
+      # We should not report anything about it.
       return if task is @trigger
-      taskInfo = @subTasks[task.taskID]
-      $.extend taskInfo, info
+
+      taskInfo = @subTasks[task.taskID]        
+      for key, value of info
+        unless key is "task"
+          taskInfo[key] = value
 
       progress = 0
       totalWeight = 0
@@ -195,12 +204,28 @@ class _CompositeTask extends _Task
 
       @dfd.notify report
 
+    task
+
+  _getSubTaskIdByName: (name) ->
+    id for id, info of @subTasks when info.name is name
+        
   createSubTask: (info) ->
     w = info.weight
-    delete info.weight        
-    task = @manager.create info, false
-    this.addSubTask weight: w, task: task
-    task
+    delete info.weight
+
+    oldSubTaskID = this._getSubTaskIdByName info.name
+    if oldSubTaskID?
+      @log.debug "When defining sub-task '" + info.name + "', overriding this existing sub-task: " + oldSubTaskID
+      this._deleteSubTask oldSubTaskID
+
+    this.addSubTask
+      weight: w
+      task: @manager.create info, false
+
+  createDummySubTask: (info) ->
+    this.addSubTask
+      weight: 0
+      task: @manager.createDummy info, false        
 
 class TaskManager
   constructor: (name) ->
@@ -216,10 +241,9 @@ class TaskManager
   _checkName: (info) ->
     name = info?.name
     unless name?
-      console.log info
       throw new Error "Trying to create a task without a name!"
     if @tasks[name]?
-      console.log "Warning: overriding existing task '" + name +
+      @log.info "Overriding existing task '" + name +
         "' with new definition!"
     name
 
@@ -233,9 +257,9 @@ class TaskManager
         task.progress cb
     task
 
-  createDummy: (info) ->
+  createDummy: (info, useDefaultProgress = true) ->
     info.code = (task) -> task.ready()
-    this.create info  
+    this.create info, useDefaultProgress  
 
   createGenerator: (info) ->
     info.manager = this
@@ -255,7 +279,7 @@ class TaskManager
   removeDeps: (from, to) -> (@lookup from).removeDeps to
 
   removeAllDepsTo: (to) ->
-    console.log "a"      
+    throw new Error "Not yet implemented."
 
   lookup: (name) ->
     result = @tasks[name]
@@ -285,3 +309,30 @@ class TaskManager
 
     null
 
+  dumpPending: () ->
+    failed = (name for name, task of @tasks when task.state() is "rejected")
+    @log.info "Failed tasks:", failed
+
+    resolved = (name for name, task of @tasks when task.state() is "resolved")
+    @log.info "Finished tasks:", resolved
+
+    running = (name for name, task of @tasks when task.state() is "pending" and task.started)
+    @log.info "Currently running tasks:", running
+
+    @log.info "Waiting tasks:"
+    for name, task of @tasks when not task.started
+      t = "Task '" + name + "'"
+      @log.info "Analyzing waiting " + t
+      try
+        deps = task.resolveDeps()
+        if deps.length is 0 and not task.started
+          @log.info t + " has no dependencies; just nobody has started it. Schedule() ? "
+        else
+          pending = []
+          for dep in deps
+            if dep.state() is "pending"
+              pending.push dep._name
+          @log.info t + ": pending dependencies: ", pending    
+        
+      catch exception
+        @log.info t + " has unresolved dependencies", exception

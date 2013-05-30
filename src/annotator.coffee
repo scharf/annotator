@@ -99,25 +99,27 @@ class Annotator extends Delegator
   # Returns a new instance of the Annotator.
   constructor: (element, options) ->
     super
-    @log = getXLogger "Annotator"
+    givenName = options?.annotatorName ? "Annotator"
+    @log ?= getXLogger givenName
+    @log.info "Annotator constructor running with options", options
+    myName = @log.name
 
-    @tasklog = getXLogger "Annotator tasks"
+    @tasklog ?= getXLogger myName + " tasks"
     # Uncomment this if you feel like debugging async task management
-    # tasklog.setLevel XLOG_LEVEL.DEBUG
+    # @tasklog.setLevel XLOG_LEVEL.DEBUG
 
-    @alog = getXLogger "Annotator anchoring"
+    @alog = getXLogger myName + " anchoring"
     # Uncomment this if you feel like debugging anchoring
     # @alog.setLevel XLOG_LEVEL.DEBUG
 
     @plugins = {}
 
     # Return early if the annotator is not supported.
-    return this unless Annotator.supported()
+    return unless Annotator.supported()
+    @domMapper = new DomTextMapper myName + " mapper"
+    @domMatcher = new DomTextMatcher @domMapper, myName + " matcher"
 
-    @domMapper = new DomTextMapper()
-    @domMatcher = new DomTextMatcher @domMapper
-
-    @tasks = new TaskManager "Annotator"
+    @tasks = new TaskManager myName
     @tasks.addDefaultProgress (info) => this.defaultNotify info
 
     unless @options.noInit
@@ -129,7 +131,7 @@ class Annotator extends Delegator
     null
         
   initSync: ->
-#    console.log "Doing sync init."
+    @log.debug "Doing sync init."
 
     @_init = new jQuery.Deferred()
     @init = @_init.promise()
@@ -137,11 +139,11 @@ class Annotator extends Delegator
     # Set up CSS styles
     this._setupDynamicStyle()
 
-    # Initialize various UI elements
-    this._setupViewer()._setupEditor()
-
     # Initialize wrapper
     this._setupWrapper()
+
+    # Initialize various UI elements
+    this._setupViewer()._setupEditor()
 
     # Create adder
     this.adder = $(this.html.adder).appendTo(@wrapper).hide()
@@ -185,6 +187,9 @@ class Annotator extends Delegator
     @init.createSubTask
       weight: 1
       name: "viewer & editor"
+      # Not sure why, but if we setup the editor without the wrapper,
+      # it will not show.
+      deps: ["wrapper"]
       code: (task) =>
         this._setupViewer()._setupEditor()
         task.ready()
@@ -198,14 +203,14 @@ class Annotator extends Delegator
 
     if @options.noScan
       # We were instructed to skip initial DOM scan        
-      scan = @tasks.createDummy name: "Skipping scan"
+      scan = @init.createDummySubTask name: "Skipping scan"
     else
-      scan = @_scanGen.create
+      info =
         instanceName: "Initial scan"
         # Scanning requires a configured wrapper
         deps: ["wrapper"]
-
-    @init.addSubTask weight: 20, task: scan
+      scan = @_scanGen.create info, false
+      @init.addSubTask weight: 20, task: scan
 
     @init.createSubTask
       weight: 0
@@ -222,11 +227,11 @@ class Annotator extends Delegator
     info.progress ?= 0
     num = Math.round ( 100 * info.progress )
     progressText = num.toString() + "%"
-    @tasklog.debug info.taskName + ": " + progressText + " - " + info.text
+    @tasklog.debug info.task._name + ": " + progressText + " - " + info.text
 
   initAsync: ->
+    @asyncMode = true        
     this.defineAsyncInitTasks()
-    @asyncMode = true
     @tasks.schedule()
 
   # Perform a sync scan of the DOM. Required for finding anchors.
@@ -527,14 +532,14 @@ class Annotator extends Delegator
       content = @domMapper.getContentForCharRange selector.start, selector.end
       currentQuote = this.normalizeString content
       if currentQuote isnt savedQuote
-        console.log "Could not apply position selector to current document \
+        @alog.debug "Could not apply position selector to current document \
           because the quote has changed. (Saved quote is '#{savedQuote}'. \
           Current quote is '#{currentQuote}'.)"
         return null
       else
-        console.log "Saved quote matches."
+        @alog.debug "Saved quote matches."
     else
-      console.log "No saved quote, nothing to compare. Assume that it's okay."
+      @alog.debug "No saved quote, nothing to compare. Assume that it's okay."
 
     # OK, we have everything. Create a range from this.
     mappings = this.domMapper.getMappingsForCharRange selector.start,
@@ -568,13 +573,12 @@ class Annotator extends Delegator
 
     # If we did not got a result, give up
     unless result.matches.length
-      console.log "Fuzzy matching did not return any results. Giving up on two-phase strategy."
+      @alog.debug "Fuzzy matching did not return any results. Giving up on two-phase strategy."
       return null
 
     # here is our result
     match = result.matches[0]
-    console.log "Fuzzy found match:"
-    console.log match
+    @alog.debug "Fuzzy found match:", match
 
     # convert it to a Range
     browserRange = new Range.BrowserRange match.realRange
@@ -614,13 +618,12 @@ class Annotator extends Delegator
 
     # If we did not got a result, give up
     unless result.matches.length
-      console.log "Fuzzy matching did not return any results. Giving up on one-phase strategy."
+      @alog.debug "Fuzzy matching did not return any results. Giving up on one-phase strategy."
       return null
 
     # here is our result
     match = result.matches[0]
-    console.log "Fuzzy found match:"
-    console.log match
+    @alog.debug "Fuzzy found match:", match
 
     # convert it to a Range
     browserRange = new Range.BrowserRange match.realRange
@@ -798,7 +801,7 @@ class Annotator extends Delegator
     if @plugins['Store']
       @plugins['Store'].dumpAnnotations()
     else
-      console.warn(_t("Can't dump annotations without Store plugin."))
+      @log.warn(_t("Can't dump annotations without Store plugin."))
 
   # Public: Wraps the DOM Nodes within the provided range with a highlight
   # element of the specified class and returns the highlight Elements.
@@ -859,8 +862,9 @@ class Annotator extends Delegator
   #
   # Returns itself to allow chaining.
   addPlugin: (name, options) ->
+    @log.info "Loading plugin '" + name + "'..."
     if @plugins[name]
-      console.error _t("You cannot have more than one instance of any plugin.")
+      @log.error _t("You cannot have more than one instance of any plugin.")
     else
       klass = Annotator.Plugin[name]
       if typeof klass is 'function'
@@ -874,6 +878,7 @@ class Annotator extends Delegator
           taskInfo = plugin.initTaskInfo
 
           if (not taskInfo?) and plugin.pluginInit?
+            @tasklog.trace "Plugin '" + name + "' does not have initTaskInfo. Creating init task around the synchronous pluginInit() method."
             # At least we have a synchronous init method.
             # Let's wrap a task around that!
             taskInfo =
@@ -904,7 +909,7 @@ class Annotator extends Delegator
           @log.debug "Synchronously initing plugin '" + name + "'."
           @plugins[name].pluginInit?()
       else
-        console.error _t("Could not load ") + name + _t(" plugin. Have you included the appropriate <script> tag?")
+        @log.error _t("Could not load ") + name + _t(" plugin. Have you included the appropriate <script> tag?")
     this # allow chaining
 
   # Public: Loads the @editor with the provided annotation and updates its
@@ -1010,8 +1015,7 @@ class Annotator extends Delegator
     try
       @selectedTargets = this.getSelectedTargets()
     catch exception
-      console.log "Error while checking selection:"
-      console.log exception.stack
+      @alog.error "While checking selection:", exception
       alert "There is something very strange about the current selection. Sorry, but I can not annotate this."
       return
 

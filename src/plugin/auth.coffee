@@ -158,7 +158,7 @@ class Annotator.Plugin.Auth extends Annotator.Plugin
     # on failure, relay any message given by the server to the user with a notification
     .fail (xhr, status, err) =>
       msg = Annotator._t("Couldn't get auth token:")
-      console.error "#{msg} #{err}", xhr
+      @annotator.log.error "#{msg} #{err}", xhr
       Annotator.showNotification("#{msg} #{xhr.responseText}", Annotator.Notification.ERROR)
       if @initTask?.state() is "pending"
         @initTask.dfd.failed msg
@@ -195,9 +195,9 @@ class Annotator.Plugin.Auth extends Annotator.Plugin
         @waitingForToken.pop()(@_unsafeToken)
 
     else
-      console.warn Annotator._t("Didn't get a valid token.")
+      @annotator.log.warn Annotator._t("Didn't get a valid token.")
       if @options.autoFetch
-        console.warn Annotator._t("Getting a new token in 10s.")
+        @annotator.log.warn Annotator._t("Getting a new token in 10s.")
         setTimeout (() => this.requestToken()), 10 * 1000
 
   # Public: Checks the validity of the current token. Note that this *does
