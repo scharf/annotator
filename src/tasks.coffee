@@ -94,7 +94,10 @@ class _Task
         progress: 0
         text: "Starting"
       @dfd.startTime = new Date().getTime()
-      @_todo @dfd, @_data
+      try
+        @_todo @dfd, @_data
+      catch exception
+        @log.error "Error while executing task '" + @_name + "'", exception
 
   _skip: =>
     if @started then return
@@ -207,7 +210,8 @@ class _CompositeTask extends _Task
     task
 
   _getSubTaskIdByName: (name) ->
-    id for id, info of @subTasks when info.name is name
+    ids = (id for id, info of @subTasks when info.name is name)
+    if ids.length isnt 0 then ids[0] else null
         
   createSubTask: (info) ->
     w = info.weight
