@@ -163,9 +163,7 @@ class _CompositeTask extends _Task
   addSubTask: (info) ->
     unless @dfd.state() is "pending"
       throw new Error "Can not add subTask to a finished task!"
-    weight = info.weight
-    unless weight?
-      throw new Error "Trying to add subTask with no weight!"      
+    weight = info.weight ? 1
     task = info.task
     unless task?
       throw new Error "Trying to add subTask with no task!"

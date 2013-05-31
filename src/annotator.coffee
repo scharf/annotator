@@ -163,21 +163,18 @@ class Annotator extends Delegator
     @init = @tasks.createComposite name: "Booting Annotator"
 
     @init.createSubTask
-      weight: 1
       name: "dynamic CSS styles"
       code: (task) =>
         this._setupDynamicStyle()
         task.ready()
 
     @init.createSubTask
-      weight: 1
       name: "wrapper"
       code: (task) =>
         this._setupWrapper()
         task.ready()
 
     @init.createSubTask
-      weight: 1
       name: "adder"
       deps: ["wrapper"] # Adder is attached to the end of the wrapper
       code: (task) =>
@@ -185,7 +182,6 @@ class Annotator extends Delegator
         task.ready()        
 
     @init.createSubTask
-      weight: 1
       name: "viewer & editor"
       # Not sure why, but if we setup the editor without the wrapper,
       # it will not show.
@@ -213,7 +209,6 @@ class Annotator extends Delegator
       @init.addSubTask weight: 20, task: scan
 
     @init.createSubTask
-      weight: 0
       name: "document events"
       # We want to listen to events only when everything is ready 
       deps: ["wrapper", "viewer & editor", scan, "dynamic CSS styles", "adder"]
