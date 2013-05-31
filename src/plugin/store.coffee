@@ -91,11 +91,16 @@ class Annotator.Plugin.Store extends Annotator.Plugin
     @annotations = []
 
     @initTaskInfo =
-      name: "load annotations"
+      name: "load annotations on store plugin init"
       code: (task) =>
         unless Annotator.supported()
           task.failed "Annotator is not supported."
-        this._getAnnotations()
+        
+        if options.skipLoading
+          # We were instructed to skip the initial loading of annotations
+          task.ready()
+        else
+          this._getAnnotations()
 
   # Public: Initialises the plugin and loads the latest annotations. If the
   # Auth plugin is also present it will request an auth token before loading
