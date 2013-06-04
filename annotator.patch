@@ -1,0 +1,491 @@
+Only in .: .DS_Store
+Only in ../../../../hypothes.is/annotator/: .git
+Only in .: annotator.patch
+diff -ru -x pgk ../../../../hypothes.is/annotator/contrib/chrome/background.js ./contrib/chrome/background.js
+--- ../../../../hypothes.is/annotator/contrib/chrome/background.js	2013-06-04 01:52:30.000000000 +0200
++++ ./contrib/chrome/background.js	2013-05-14 11:00:00.000000000 +0200
+@@ -4,33 +4,68 @@
+ 
+ const ICON_SIZE = 48
+ 
+-var enabled = false;
+-var loaded = false;
++var enabled = true;
++var loaded = [];
+ 
+-var canvas = document.createElement('canvas')
+-var icon = new Image()
+-icon.src = chrome.extension.getURL('img/annotator-icon-sprite.png')
+-icon.alt = 'Annotate'
+-icon.onload = setIcon
+-
+-function setIcon() {
+-  var state = (loaded && enabled) ? STATE_ENABLED : STATE_DISABLED;
+-  var ctx = canvas.getContext('2d');
+-  ctx.drawImage(icon, ICON_SIZE * state, 0, ICON_SIZE, ICON_SIZE, 0, 0, 19, 19)
+-  chrome.browserAction.setIcon({
+-    imageData: ctx.getImageData(0, 0, 19, 19)
+-  })
++var canvas = document.createElement('canvas');
++var icon = new Image();
++icon.src = chrome.extension.getURL('img/annotator-icon-sprite.png');
++icon.alt = 'Annotate';
++icon.onload = setIcon;
++
++function setIcon(tabId) {
++	var state = (loaded[tabId] && enabled) ? STATE_ENABLED : STATE_DISABLED;
++	var ctx = canvas.getContext('2d');
++	ctx.drawImage(icon, ICON_SIZE * state, 0, ICON_SIZE, ICON_SIZE, 0, 0, 19, 19);
++	chrome.browserAction.setIcon({
++		imageData: ctx.getImageData(0, 0, 19, 19)
++	})
+ }
+ 
+ chrome.browserAction.onClicked.addListener(function(tab) {
+-  var message = loaded ? (enabled ? 'hide' : 'show') : 'load'
+-  chrome.tabs.sendRequest(tab.id, {annotator: message}, function (response) {
+-    if (response.error) {
+-      throw response.error
+-    } else {
+-      if (!loaded) loaded = true
+-      enabled = !enabled;
+-    }
+-    setIcon()
+-  })
+-})
++	if (loaded[tab.id])
++	{
++		loaded[tab.id] = false;
++		chrome.tabs.reload(tab.id, {}, function() {
++			setIcon(tab.id);
++		});
++	}
++	else
++	{
++		var message = 'load';
++		chrome.tabs.sendRequest(tab.id, {annotator: message}, function (response) {
++			if (response.error) {
++				throw response.error;
++			} 
++			else {
++				loaded[tab.id] = true;
++			}
++			setIcon(tab.id);
++		});
++	}
++});
++
++chrome.tabs.onActivated.addListener(function(activeInfo) {
++	setIcon(activeInfo.tabId);
++});
++
++chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
++	//console.log('tab updated');
++	loaded[tabId] = false;
++});
++
++/*
++chrome.browserAction.onClicked.addListener(function(tab) {
++	var message = loaded ? (enabled ? 'hide' : 'show') : 'load'
++	window.messenger.sendRequest({annotator: message}, function (response) {
++		if (response.error) {
++			throw response.error;
++		} 
++		else {
++			if (!loaded) 
++				loaded = true;
++			enabled = !enabled;
++		}
++	});
++});
++*/
+Only in ./contrib/chrome: bbootstrap.js
+Only in ./contrib/chrome: bmsgs.js
+Only in ./contrib/chrome: browserapi.js
+diff -ru -x pgk ../../../../hypothes.is/annotator/contrib/chrome/content.js ./contrib/chrome/content.js
+--- ../../../../hypothes.is/annotator/contrib/chrome/content.js	2013-06-04 01:52:30.000000000 +0200
++++ ./contrib/chrome/content.js	2013-05-14 10:34:10.000000000 +0200
+@@ -5,15 +5,41 @@
+  * handled here.
+  */
+ chrome.extension.onRequest.addListener(
+-  function (request, sender, sendResponse) {
+-    var command = request.annotator
+-    if (command) {
+-      if (command === 'load') {
+-        $(document.body).annotator().annotator('setupPlugins')
+-        sendResponse({ok: true})
+-      } else {
+-        sendResponse({error: new TypeError("not implemented: " + command)})
+-      }
+-    }
+-  }
++	function (request, sender, sendResponse) 
++	{
++		var command = request.annotator;
++		if (command) 
++		{
++			if (command === 'load') 
++			{
++				$(document.body).annotator().annotator('setupPlugins');
++				
++				var options = {};
++				options.categories = {
++					'highlight':'annotator-hl-highlight', 
++					'underline':'annotator-hl-underline', 
++					'rect':'annotator-hl-rect', 
++					'bold':'annotator-hl-bold' 
++				};
++
++				$(document.body).annotator().annotator('addPlugin', 'Categories', options.categories);
++				
++				sendResponse({ok: true});
++			} 
++			else if (command === 'hide') 
++			{
++				console.log('got hide');
++				sendResponse({ok: true});
++			}
++			else if (command === 'show') 
++			{
++				console.log('got show');
++				sendResponse({ok: true});
++			} 
++			else 
++			{
++				sendResponse({error: new TypeError("not implemented: " + command)});
++			}
++		}
++	}
+ )
+diff -ru -x pgk ../../../../hypothes.is/annotator/css/annotator.css ./css/annotator.css
+--- ../../../../hypothes.is/annotator/css/annotator.css	2013-06-04 01:52:30.000000000 +0200
++++ ./css/annotator.css	2013-05-14 13:49:22.000000000 +0200
+@@ -27,6 +27,7 @@
+ .annotator-adder {
+ 	background-image: url(../img/annotator-icon-sprite.png);
+ 	background-repeat: no-repeat;
++	border: none;
+ }
+ 
+ .annotator-resize,
+@@ -885,3 +886,20 @@
+ .annotator-hl-filtered {
+ 	background-color: transparent;
+ }
++
++.annotator-hl.annotator-hl-highlight {
++    background: #ffffc0 !important;
++}
++
++.annotator-hl.annotator-hl-underline {
++	border-bottom: 1px solid #7f0000 !important;
++}
++
++.annotator-hl.annotator-hl-rect {
++    border: 1px solid black !important;
++}
++
++.annotator-hl.annotator-hl-bold {
++    font-weight: bold !important;
++}
++
+diff -ru -x pgk ../../../../hypothes.is/annotator/manifest.json ./manifest.json
+--- ../../../../hypothes.is/annotator/manifest.json	2013-06-04 01:52:30.000000000 +0200
++++ ./manifest.json	2013-05-14 11:01:18.000000000 +0200
+@@ -1,11 +1,12 @@
+ {
+-  "name": "Annotator",
+-  "version": "0.0.9",
++  "name": "ANN.2",
++  "version": "0.6",
+   "manifest_version": 2,
+-  "description": "Inline annotation for the web. Select text, images, or (nearly) anything else, and add your notes.",
++  "description": "Inline annotation for the web. Select text and add your notes.",
+   "background": {
+-    "scripts": ["contrib/chrome/background.js"]
++    "scripts": [ "lib/vendor/jquery.js", "contrib/chrome/background.js" ]
+   },
++
+   "browser_action": {
+     "scripts": []
+   },
+@@ -14,11 +15,11 @@
+       "matches": ["<all_urls>"],
+       "js": [
+         "lib/vendor/jquery.js",
+-        "pkg/annotator-full.min.js",
++        "pkg/annotator-full.js",
+         "contrib/chrome/content.js"
+       ],
+       "css": [
+-        "pkg/annotator.min.css"
++        "pkg/annotator.css"
+       ]
+     }
+   ],
+Only in .: node_modules
+Only in ./pkg: .DS_Store
+diff -ru -x pgk ../../../../hypothes.is/annotator/pkg/Makefile ./pkg/Makefile
+--- ../../../../hypothes.is/annotator/pkg/Makefile	2013-06-04 01:54:17.000000000 +0200
++++ ./pkg/Makefile	2013-05-14 13:28:42.000000000 +0200
+@@ -3,7 +3,6 @@
+ PATH:=$(shell npm bin):$(PATH)
+ 
+ ANNOTATOR=\
+-	xpath.coffee \
+ 	extensions.coffee \
+ 	console.coffee \
+ 	class.coffee \
+@@ -17,6 +16,7 @@
+ PLUGINS=\
+ 	plugin/annotateitpermissions.coffee \
+ 	plugin/auth.coffee \
++	plugin/categories.coffee \
+ 	plugin/filter.coffee \
+ 	plugin/kitchensink.coffee \
+ 	plugin/markdown.coffee \
+@@ -35,6 +35,7 @@
+ 	plugin/filter.coffee \
+ 	plugin/markdown.coffee \
+ 	plugin/tags.coffee \
++	plugin/categories.coffee \
+ 	plugin/kitchensink.coffee
+ 
+ BOOKMARKLET=\
+@@ -44,12 +45,13 @@
+ 	plugin/permissions.coffee \
+ 	plugin/annotateitpermissions.coffee \
+ 	plugin/unsupported.coffee \
++	plugin/categories.coffee \
+ 	plugin/tags.coffee
+ 
+ BOOKMARKLET_CFG=../contrib/bookmarklet/config.json
+ BOOKMARKLET_SRC=../contrib/bookmarklet/src/bookmarklet.js
+ 
+-all: annotator plugins annotator-full bookmarklet
++all: annotator plugins annotator-full bookmarklet chrome
+ 
+ annotator: annotator.min.js annotator.min.css
+ 
+@@ -73,6 +75,10 @@
+ 
+ bookmarklet: annotator-bookmarklet.min.js annotator.min.css bookmarklet.min.js
+ 
++chrome: 
++	cp annotator-full.js ../../anno.2
++	cp annotator.css ../../anno.2
++
+ annotator-bookmarklet.js: $(BOOKMARKLET)
+ 	@(../tools/preamble && \
+ 	  for f in $(BOOKMARKLET); do cat ../src/"$$f"; done) | \
+Only in ./pkg: annotator-bookmarklet.js
+Only in ./pkg: annotator-bookmarklet.min.js
+Only in ./pkg: annotator-full.js
+Only in ./pkg: annotator-full.min.js
+Only in ./pkg: annotator.annotateitpermissions.js
+Only in ./pkg: annotator.annotateitpermissions.min.js
+Only in ./pkg: annotator.auth.js
+Only in ./pkg: annotator.auth.min.js
+Only in ./pkg: annotator.categories.js
+Only in ./pkg: annotator.categories.min.js
+Only in ./pkg: annotator.css
+Only in ./pkg: annotator.filter.js
+Only in ./pkg: annotator.filter.min.js
+Only in ./pkg: annotator.js
+Only in ./pkg: annotator.kitchensink.js
+Only in ./pkg: annotator.kitchensink.min.js
+Only in ./pkg: annotator.markdown.js
+Only in ./pkg: annotator.markdown.min.js
+Only in ./pkg: annotator.min.css
+Only in ./pkg: annotator.min.js
+Only in ./pkg: annotator.permissions.js
+Only in ./pkg: annotator.permissions.min.js
+Only in ./pkg: annotator.store.js
+Only in ./pkg: annotator.store.min.js
+Only in ./pkg: annotator.tags.js
+Only in ./pkg: annotator.tags.min.js
+Only in ./pkg: annotator.unsupported.js
+Only in ./pkg: annotator.unsupported.min.js
+Only in ./pkg: bookmarklet.js
+Only in ./pkg: bookmarklet.min.js
+Only in ./src: .DS_Store
+diff -ru -x pgk ../../../../hypothes.is/annotator/src/extensions.coffee ./src/extensions.coffee
+--- ../../../../hypothes.is/annotator/src/extensions.coffee	2013-06-04 01:54:17.000000000 +0200
++++ ./src/extensions.coffee	2013-05-04 16:12:26.000000000 +0200
+@@ -72,22 +72,21 @@
+   this.map -> $.flatten(getTextNodes(this))
+ 
+ $.fn.xpath = (relativeRoot) ->
+-  try
+-    result = simpleXPathJQuery.call this, relativeRoot
+-  catch exception
+-    console.log "jQuery-based XPath construction failed! Falling back to manual."
+-    result = simpleXPathPure.call this, relativeRoot
+-  result
+-
+-$.xpath = (xp, root) ->
+-  steps = xp.substring(1).split("/")
+-  node = root
+-  for step in steps
+-    [name, idx] = step.split "["
+-    idx = if idx? then parseInt (idx?.split "]")[0] else 1
+-    node = findChild node, name.toLowerCase(), idx
++  jq = this.map ->
++    path = ''
++    elem = this
+ 
+-  node
++    # elementNode nodeType == 1
++    while elem and elem.nodeType == 1 and elem isnt relativeRoot
++      idx = $(elem.parentNode).children(elem.tagName).index(elem) + 1
++
++      idx  = "[#{idx}]"
++      path = "/" + elem.tagName.toLowerCase() + idx + path
++      elem = elem.parentNode
++
++    path
++
++  jq.get()
+ 
+ $.escape = (html) ->
+   html.replace(/&(?!\w+;)/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+Only in ./src/plugin: categories.coffee
+Only in ../../../../hypothes.is/annotator/src/plugin: document.coffee
+diff -ru -x pgk ../../../../hypothes.is/annotator/src/plugin/store.coffee ./src/plugin/store.coffee
+--- ../../../../hypothes.is/annotator/src/plugin/store.coffee	2013-06-04 01:52:30.000000000 +0200
++++ ./src/plugin/store.coffee	2013-05-04 16:12:26.000000000 +0200
+@@ -259,21 +259,8 @@
+   #
+   # Returns nothing.
+   _onLoadAnnotations: (data=[]) =>
+-
+-    annotationMap = {}
+-    for a in @annotations
+-      annotationMap[a.id] = a
+-
+-    newData = []
+-    for a in data
+-      if annotationMap[a.id]
+-        annotation = annotationMap[a.id]
+-        this.updateAnnotation annotation, a
+-      else
+-        newData.push(a)
+-
+-    @annotations = @annotations.concat(newData)
+-    @annotator.loadAnnotations(newData.slice()) # Clone array
++    @annotations = @annotations.concat(data)
++    @annotator.loadAnnotations(data.slice()) # Clone array
+ 
+   # Public: Performs the same task as Store.#loadAnnotations() but calls the
+   # 'search' URI with an optional query string.
+diff -ru -x pgk ../../../../hypothes.is/annotator/src/range.coffee ./src/range.coffee
+--- ../../../../hypothes.is/annotator/src/range.coffee	2013-06-04 01:54:17.000000000 +0200
++++ ./src/range.coffee	2013-05-04 16:12:26.000000000 +0200
+@@ -39,23 +39,7 @@
+ # Returns the Node if found otherwise null.
+ Range.nodeFromXPath = (xpath, root=document) ->
+   evaluateXPath = (xp, nsResolver=null) ->
+-    try
+-      document.evaluate('.' + xp, root, nsResolver, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue
+-    catch exception
+-      # There are cases when the evaluation fails, because the
+-      # HTML documents contains nodes with invalid names,
+-      # for example tags with equal signs in them, or something like that.
+-      # In these cases, the XPath expressions will have these abominations,
+-      # too, and then they can not be evaluated.
+-      # In these cases, we get an XPathException, with error code 52.
+-      # See http://www.w3.org/TR/DOM-Level-3-XPath/xpath.html#XPathException
+-      # This does not necessarily make any sense, but this what we see
+-      # happening.
+-      console.log "XPath evaluation failed."
+-      console.log "Trying fallback..."
+-      # We have a an 'evaluator' for the really simple expressions that
+-      # should work for the simple expressions we generate.
+-      $.xpath xp, root
++    document.evaluate('.' + xp, root, nsResolver, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue
+ 
+   if not $.isXMLDoc document.documentElement
+     evaluateXPath xpath
+Only in ../../../../hypothes.is/annotator/src: xpath.coffee
+diff -ru -x pgk ../../../../hypothes.is/annotator/test/runner.html ./test/runner.html
+--- ../../../../hypothes.is/annotator/test/runner.html	2013-06-04 01:54:17.000000000 +0200
++++ ./test/runner.html	2013-05-04 16:12:26.000000000 +0200
+@@ -26,8 +26,6 @@
+     </script>
+     <script src="../lib/helpers/spec_helper.js"></script>
+ 
+-    <script src="../lib/xpath.js"></script>
+-
+     <script src="../lib/extensions.js"></script>
+     <script src="../lib/spec/extensions_spec.js"></script>
+ 
+@@ -78,9 +76,6 @@
+     <script src="../lib/plugin/kitchensink.js"></script>
+     <script src="../lib/spec/plugin/kitchensink_spec.js"></script>
+ 
+-    <script src="../lib/plugin/document.js"></script>
+-    <script src="../lib/spec/plugin/document_spec.js"></script>
+-
+     <script>
+       if (window.mochaPhantomJS) {
+         mochaPhantomJS.run();
+Only in ../../../../hypothes.is/annotator/test/spec/plugin: document_spec.coffee
+diff -ru -x pgk ../../../../hypothes.is/annotator/test/spec/plugin/store_spec.coffee ./test/spec/plugin/store_spec.coffee
+--- ../../../../hypothes.is/annotator/test/spec/plugin/store_spec.coffee	2013-06-04 01:52:30.000000000 +0200
++++ ./test/spec/plugin/store_spec.coffee	2013-05-04 16:12:26.000000000 +0200
+@@ -221,11 +221,11 @@
+       assert.notStrictEqual(store.annotator.loadAnnotations.lastCall.args[0], data)
+       assert.deepEqual(store.annotator.loadAnnotations.lastCall.args[0], data)
+ 
+-    it "should add, dedupe and update annotations when called for the 2nd time", ->
+-      data1 = [{id: 1}, {id: 2}]
+-      data2 = [{id: 1, foo: "bar"}, {id: 3}]
+-      dataAll = [{id: 1, foo: "bar"}, {id: 2}, {id: 3}]
+-      store._onLoadAnnotations(data1)
++    it "should concatenate new annotations when called a second time", ->
++      data = [1,2,3];
++      data2 = [4,5,6];
++      dataAll = data.concat(data2);
++      store._onLoadAnnotations(data)
+       store._onLoadAnnotations(data2)
+       assert.deepEqual(store.annotations, dataAll)
+ 
+diff -ru -x pgk ../../../../hypothes.is/annotator/tools/serve ./tools/serve
+--- ../../../../hypothes.is/annotator/tools/serve	2013-06-04 01:54:17.000000000 +0200
++++ ./tools/serve	2013-05-04 16:12:26.000000000 +0200
+@@ -1,7 +1,6 @@
+ #!/usr/bin/env node
+ 
+ var http = require('http');
+-var sys = require('sys');
+ var static = require('node-static');
+ var jwt = require('jwt-simple');
+ var iso8601 = require('iso8601');
+@@ -17,17 +16,8 @@
+ 
+ http.createServer(function (request, response) {
+     request.addListener('end', function () {
+-        fileServer.serve(request, response, function (err, result) {
+-            if (err) { // There was an error serving the file
+-                sys.error("Error serving " + request.url + " - " + err.message);
+-
+-                // Respond to the client
+-                response.writeHead(err.status, err.headers);
+-                response.end();
+-            }
+-        });
++        fileServer.serve(request, response);
+     });
+-    request.resume();
+ }).listen(STATIC_PORT);
+ 
+ http.createServer(function (request, response) {
+@@ -52,7 +42,6 @@
+ 
+         response.end(tok);
+     });
+-    request.resume();
+ }).listen(TOKEN_PORT);
+ 
+ console.log("Serving the current working directory on port", STATIC_PORT);

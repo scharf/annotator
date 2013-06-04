@@ -27,6 +27,7 @@
 .annotator-adder {
 	background-image: url(../img/annotator-icon-sprite.png);
 	background-repeat: no-repeat;
+	border: none;
 }
 
 .annotator-resize,
@@ -885,3 +886,20 @@
 .annotator-hl-filtered {
 	background-color: transparent;
 }
+
+.annotator-hl.annotator-hl-highlight {
+    background: #ffffc0 !important;
+}
+
+.annotator-hl.annotator-hl-underline {
+	border-bottom: 1px solid #7f0000 !important;
+}
+
+.annotator-hl.annotator-hl-rect {
+    border: 1px solid black !important;
+}
+
+.annotator-hl.annotator-hl-bold {
+    font-weight: bold !important;
+}
+

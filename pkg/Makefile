@@ -3,7 +3,6 @@ vpath %.coffee ../src
 PATH:=$(shell npm bin):$(PATH)
 
 ANNOTATOR=\
-	xpath.coffee \
 	extensions.coffee \
 	console.coffee \
 	class.coffee \
@@ -17,6 +16,7 @@ ANNOTATOR=\
 PLUGINS=\
 	plugin/annotateitpermissions.coffee \
 	plugin/auth.coffee \
+	plugin/categories.coffee \
 	plugin/filter.coffee \
 	plugin/kitchensink.coffee \
 	plugin/markdown.coffee \
@@ -35,6 +35,7 @@ ANNOTATOR_FULL=\
 	plugin/filter.coffee \
 	plugin/markdown.coffee \
 	plugin/tags.coffee \
+	plugin/categories.coffee \
 	plugin/kitchensink.coffee
 
 BOOKMARKLET=\
@@ -44,12 +45,13 @@ BOOKMARKLET=\
 	plugin/permissions.coffee \
 	plugin/annotateitpermissions.coffee \
 	plugin/unsupported.coffee \
+	plugin/categories.coffee \
 	plugin/tags.coffee
 
 BOOKMARKLET_CFG=../contrib/bookmarklet/config.json
 BOOKMARKLET_SRC=../contrib/bookmarklet/src/bookmarklet.js
 
-all: annotator plugins annotator-full bookmarklet
+all: annotator plugins annotator-full bookmarklet chrome
 
 annotator: annotator.min.js annotator.min.css
 
@@ -72,6 +74,10 @@ annotator.css: ../css/annotator.css
 	@../tools/data_uri_ify <../css/annotator.css >annotator.css
 
 bookmarklet: annotator-bookmarklet.min.js annotator.min.css bookmarklet.min.js
+
+chrome: 
+	cp annotator-full.js ../../anno.2
+	cp annotator.css ../../anno.2
 
 annotator-bookmarklet.js: $(BOOKMARKLET)
 	@(../tools/preamble && \
