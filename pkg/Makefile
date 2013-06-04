@@ -76,8 +76,8 @@ annotator.css: ../css/annotator.css
 bookmarklet: annotator-bookmarklet.min.js annotator.min.css bookmarklet.min.js
 
 chrome: 
-	cp annotator-full.js ../../anno.2
-	cp annotator.css ../../anno.2
+	cp annotator-full.js ../../ann/anno.2
+	cp annotator.css ../../ann/anno.2
 
 annotator-bookmarklet.js: $(BOOKMARKLET)
 	@(../tools/preamble && \
