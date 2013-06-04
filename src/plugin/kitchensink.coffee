@@ -51,6 +51,8 @@ Annotator::setupPlugins = (config={}, options={}) ->
       prefix: config.storeUrl or 'http://annotateit.org/api'
       annotationData:
         uri: uri
+        # user: 'ck5'
+        # limit: 200
       loadFromSearch:
         uri: uri
 
