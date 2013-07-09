@@ -1,6 +1,6 @@
 {
   "name": "annotator",
-  "version": "1.2.6",
+  "version": "1.2.7",
   "description": "Inline annotation for the web. Select text, images, or (nearly) anything else, and add your notes.",
   "repositories": [
     {
@@ -10,7 +10,8 @@
   ],
   "devDependencies": {
     "coffee-script": "1.6.x",
-    "uglify-js": "1.2.5",
+    "uglify-js": "2.3.6",
+    "mapcat": "0.1.0",
     "uglifycss": "0.0.5",
     "mocha": "1.9.0",
     "mocha-phantomjs": "2.0.1",

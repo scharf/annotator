@@ -1,6 +1,8 @@
 Annotator
 =========
 
+[![Build Status](https://secure.travis-ci.org/okfn/annotator.png)](http://travis-ci.org/okfn/annotator)
+
 Annotator is a web annotation system. Loaded into a webpage, it provides the
 user with tools to annotate text (and other elements) in the page. For a simple
 demonstration, visit the [demo page][dp] or [download a tagged release of
@@ -36,16 +38,25 @@ important files in these packages are `annotator.min.js` (or
 `annotator.min.css`, which contains all the CSS and embedded images for the
 annotator.
 
-Annotator requires [jQuery][$]. The quickest way to get going with Annotator is
-to include the following in the `<head>` of your document (paths relative to the
-root of the unzipped download):
+Annotator requires [jQuery][$]. As of Annotator v1.2.7, jQuery v1.9 is assumed.
+If you require an older version of jQuery, or are using an older version of
+Annotator and require the new jQuery, you can use the [jQuery Migrate Plugin][$m].
+The quickest way to get going with Annotator is to include the following in the
+`<head>` of your document (paths relative to the root of the unzipped download):
 
-    <script src='http://ajax.googleapis.com/ajax/libs/jquery/1.7/jquery.min.js'></script>
+    <script src='http://ajax.googleapis.com/ajax/libs/jquery/1.9/jquery.min.js'></script>
+    <script src='annotator.min.js'></script>
+    <link rel='stylesheet' href='annotator.min.css'>
+    
+Or, with migrate:
 
+    <script src='http://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js'></script>
+    <script src= "http://code.jquery.com/jquery-migrate-1.2.1.js"></script>
     <script src='annotator.min.js'></script>
     <link rel='stylesheet' href='annotator.min.css'>
 
 [$]: http://jquery.com/
+[$m]: http://plugins.jquery.com/migrate/
 
 You can then initialize Annotator for the whole document by including the
 following at the end of the `<body>` tag:

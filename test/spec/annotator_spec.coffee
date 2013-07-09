@@ -85,6 +85,21 @@ describe 'Annotator', ->
       Annotator.prototype.constructor.call(annotator, annotator.element[0])
       assert(annotator._setupDynamicStyle.called)
 
+  describe "#destroy()", ->
+    it "should unbind Annotator's events from the page", ->
+      stub = sinon.stub(annotator, 'checkForStartSelection')
+
+      annotator._setupDocumentEvents()
+      annotator.destroy()
+      $(document).mousedown()
+
+      assert.isFalse(stub.called)
+      $(document).unbind('mousedown')
+
+    it "should remove Annotator's elements from the page", ->
+      annotator.destroy()
+      assert.equal(annotator.element.find('[class^=annotator-]').length, 0)
+
   describe "_setupDocumentEvents", ->
     beforeEach: ->
       $(document).unbind('mouseup').unbind('mousedown')
@@ -333,11 +348,11 @@ describe 'Annotator', ->
       mockGlobal = {
         getSelection: sinon.stub().returns(mockSelection)
       }
-      sinon.stub(util, 'getGlobal').returns(mockGlobal)
+      sinon.stub(Util, 'getGlobal').returns(mockGlobal)
       sinon.stub(Range, 'BrowserRange').returns(mockRange)
 
     afterEach ->
-      util.getGlobal.restore()
+      Util.getGlobal.restore()
       Range.BrowserRange.restore()
 
     it "should retrieve the global object and call getSelection()", ->
@@ -744,7 +759,7 @@ describe 'Annotator', ->
       mockOffset = {top: 0, left: 0}
       mockRanges = [{}]
 
-      sinon.stub(util, 'mousePosition').returns(mockOffset)
+      sinon.stub(Util, 'mousePosition').returns(mockOffset)
       sinon.stub(annotator.adder, 'show').returns(annotator.adder)
       sinon.stub(annotator.adder, 'hide').returns(annotator.adder)
       sinon.stub(annotator.adder, 'css').returns(annotator.adder)
@@ -755,7 +770,7 @@ describe 'Annotator', ->
       annotator.checkForEndSelection(mockEvent)
 
     afterEach ->
-      util.mousePosition.restore()
+      Util.mousePosition.restore()
 
     it "should get the current selection from Annotator#getSelectedRanges()", ->
       assert(annotator.getSelectedRanges.calledOnce)
@@ -769,7 +784,7 @@ describe 'Annotator', ->
     it "should display the Annotator#adder if valid selection", ->
       assert(annotator.adder.show.calledOnce)
       assert.isTrue(annotator.adder.css.calledWith(mockOffset))
-      assert.isTrue(util.mousePosition.calledWith(mockEvent, annotator.wrapper[0]))
+      assert.isTrue(Util.mousePosition.calledWith(mockEvent, annotator.wrapper[0]))
 
     it "should hide the Annotator#adder if NOT valid selection", ->
       annotator.adder.hide.reset()
@@ -837,20 +852,20 @@ describe 'Annotator', ->
       }
       mockOffset = {top: 0, left: 0}
 
-      sinon.stub(util, 'mousePosition').returns(mockOffset)
+      sinon.stub(Util, 'mousePosition').returns(mockOffset)
       sinon.spy(annotator, 'showViewer')
 
       annotator.viewerHideTimer = 60
       annotator.onHighlightMouseover(mockEvent)
 
     afterEach ->
-      util.mousePosition.restore()
+      Util.mousePosition.restore()
 
     it "should clear the current @viewerHideTimer", ->
       assert.isFalse(annotator.viewerHideTimer)
 
     it "should fetch the current mouse position", ->
-      assert.isTrue(util.mousePosition.calledWith(mockEvent, annotator.wrapper[0]))
+      assert.isTrue(Util.mousePosition.calledWith(mockEvent, annotator.wrapper[0]))
 
     it "should display the Annotation#viewer with annotations", ->
       assert.isTrue(annotator.showViewer.calledWith([annotation], mockOffset))
@@ -1017,23 +1032,3 @@ describe "Annotator.supported()", ->
     # return that result.
     window.getSelection = undefined
     assert.isFalse(Annotator.supported())
-
-describe "util.uuid()", ->
-  it "should return a unique id on each call", ->
-    counter = 100
-    results = []
-
-    while counter--
-      current = util.uuid()
-      assert.equal(results.indexOf(current), -1)
-      results.push current
-
-describe "util.preventEventDefault()", ->
-  it "should call prevent default if the method exists", ->
-    event = {preventDefault: sinon.spy()}
-    util.preventEventDefault(event)
-    assert(event.preventDefault.calledOnce)
-
-    assert.doesNotThrow((-> util.preventEventDefault(1)), Error)
-    assert.doesNotThrow((-> util.preventEventDefault(null)), Error)
-    assert.doesNotThrow((-> util.preventEventDefault(undefined)), Error)
