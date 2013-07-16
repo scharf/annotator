@@ -227,14 +227,23 @@ class Annotator extends Delegator
     $('link[rel^="canonical"]').each -> uri = decodeURIComponent this.href
     return uri
 
+  # Create a RangeSelector from a NormalizedRange
   getRangeSelector: (range) ->
     sr = range.serialize @wrapper[0]
     selector =
       type: "RangeSelector"
-      startContainer: sr.startContainer
+      startContainer: sr.start
       startOffset: sr.startOffset
-      endContainer: sr.endContainer
+      endContainer: sr.end
       endOffset: sr.endOffset
+
+  # Create a SerializedRange from a RangeSelector
+  getSerializedRange: (selector) ->
+    return new Range.SerializedRange
+      start: selector.startContainer
+      startOffset: selector.startOffset
+      end: selector.endContainer
+      endOffset: selector.endOffset        
 
   getTextQuoteSelector: (range) ->
     unless range?
@@ -366,7 +375,7 @@ class Annotator extends Delegator
     unless selector? then return null
 
     # Try to apply the saved XPath
-    normalizedRange = Range.sniff(selector).normalize @wrapper[0]
+    normalizedRange = this.getSerializedRange(selector).normalize @wrapper[0]
     # Look up the saved quote
     savedQuote = this.getQuoteForTarget target
     if savedQuote?
