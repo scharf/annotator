@@ -19,7 +19,10 @@ util =
     Math.max.apply(Math, all)
 
   mousePosition: (e, offsetEl) ->
-    offset = $(offsetEl).position()
+    # If the offset element is not a positioning root use its offset parent
+    unless $(offsetEl).css('position') in ['absolute', 'fixed', 'relative']
+      offsetEl = $(offsetEl).offsetParent()[0]
+    offset = $(offsetEl).offset()
     {
       top:  e.pageY - offset.top,
       left: e.pageX - offset.left
