@@ -227,23 +227,14 @@ class Annotator extends Delegator
     $('link[rel^="canonical"]').each -> uri = decodeURIComponent this.href
     return uri
 
-  # Create a RangeSelector from a NormalizedRange
   getRangeSelector: (range) ->
     sr = range.serialize @wrapper[0]
     selector =
       type: "RangeSelector"
-      startContainer: sr.start
+      startContainer: sr.startContainer
       startOffset: sr.startOffset
-      endContainer: sr.end
+      endContainer: sr.endContainer
       endOffset: sr.endOffset
-
-  # Create a SerializedRange from a RangeSelector
-  getSerializedRange: (selector) ->
-    return new Range.SerializedRange
-      start: selector.startContainer
-      startOffset: selector.startOffset
-      end: selector.endContainer
-      endOffset: selector.endOffset        
 
   getTextQuoteSelector: (range) ->
     unless range?
@@ -375,7 +366,7 @@ class Annotator extends Delegator
     unless selector? then return null
 
     # Try to apply the saved XPath
-    normalizedRange = this.getSerializedRange(selector).normalize @wrapper[0]
+    normalizedRange = Range.sniff(selector).normalize @wrapper[0]
     # Look up the saved quote
     savedQuote = this.getQuoteForTarget target
     if savedQuote?
@@ -392,7 +383,7 @@ class Annotator extends Delegator
           Current quote is '#{currentQuote}'.)"
         return null
       else
-        console.log "Saved quote matches."
+#        console.log "Saved quote matches."
     else
       console.log "No saved quote, nothing to compare. Assume that it's OK."
     range: normalizedRange
@@ -414,7 +405,7 @@ class Annotator extends Delegator
           Current quote is '#{currentQuote}'.)"
         return null
       else
-        console.log "Saved quote matches."
+#        console.log "Saved quote matches."
     else
       console.log "No saved quote, nothing to compare. Assume that it's okay."
 
@@ -522,8 +513,8 @@ class Annotator extends Delegator
   findAnchor: (target) ->
     unless target?
       throw new Error "Trying to find anchor for null target!"
-    console.log "Trying to find anchor for target: "
-    console.log target
+#    console.log "Trying to find anchor for target: "
+#    console.log target
 
     strategies = [
       # Simple strategy based on DOM Range
