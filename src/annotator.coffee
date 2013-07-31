@@ -960,6 +960,25 @@ class Annotator extends Delegator
 
     # Extract the quotation and serialize the ranges
     annotation = this.setupAnnotation(annotation)
+ 
+    @onEditNewAnnotation annotation,position
+
+  # Public: Loads the @editor with the provided annotation and updates its
+  # position in the window.
+  #  
+  # It does the proper handling of saving on the 'annotationEditorSubmit' event.
+  #
+  # The annotation gets removed on the 'annotationEditorSubmit' event.
+  #
+  # annotation - An annotation to load into the editor.
+  # location   - Position to set the Editor in the form {top: y, left: x}
+  #
+  # Examples
+  #
+  #   annotator.onEditNewAnnotation({text: "my comment"}, {top: 34, left: 234})
+  #
+  # Returns itself to allow chaining.
+  onEditNewAnnotation: (annotation,position) =>
 
     # Show a temporary highlight so the user can see what they selected
     $(annotation.highlights).addClass('annotator-hl-temporary')
