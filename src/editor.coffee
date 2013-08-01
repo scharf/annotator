@@ -83,6 +83,8 @@ class Annotator.Editor extends Annotator.Widget
     # give main textarea focus
     @element.find(":input:first").focus()
 
+    @element.find(".annotator-save").focus()
+
     this.setupDraggables()
 
     this.publish('show')
