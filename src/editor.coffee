@@ -7,7 +7,7 @@ class Annotator.Editor extends Annotator.Widget
     ".annotator-save click":       "submit"
     ".annotator-cancel click":     "hide"
     ".annotator-cancel mouseover": "onCancelButtonMouseover"
-    "textarea keydown":            "processKeypress"
+    ".annotator-widget keyup":     "processKeypress"
 
   # Classes to toggle state.
   classes:
