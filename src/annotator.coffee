@@ -873,16 +873,17 @@ class Annotator extends Delegator
       return if this.isAnnotator(container)
 
     if event and @selectedRanges.length
-      this.onSuccessfulSelection()  
+      this.onSuccessfulSelection event
     else
-      this.onFailedSelection()
+      this.onFailedSelection event
 
-  onSuccessfulSelection: =>
+  onSuccessfulSelection: (event) =>
+    console.log "Showing adder"
     @adder
       .css(util.mousePosition(event, @wrapper[0]))
       .show()
 
-  onFailedSelection: =>
+  onFailedSelection: (event) =>
     @adder.hide()
 
 
