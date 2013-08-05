@@ -873,11 +873,18 @@ class Annotator extends Delegator
       return if this.isAnnotator(container)
 
     if event and @selectedRanges.length
-      @adder
-        .css(util.mousePosition(event, @wrapper[0]))
-        .show()
+      this.onSuccessfulSelection()  
     else
-      @adder.hide()
+      this.onFailedSelection()
+
+  onSuccessfulSelection: =>
+    @adder
+      .css(util.mousePosition(event, @wrapper[0]))
+      .show()
+
+  onFailedSelection: =>
+    @adder.hide()
+
 
   # Public: Determines if the provided element is part of the annotator plugin.
   # Useful for ignoring mouse actions on the annotator elements.
