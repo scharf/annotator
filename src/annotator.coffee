@@ -877,13 +877,12 @@ class Annotator extends Delegator
     else
       this.onFailedSelection event
 
-  onSuccessfulSelection: (event) =>
-    console.log "Showing adder"
+  onSuccessfulSelection: (event) ->
     @adder
       .css(util.mousePosition(event, @wrapper[0]))
       .show()
 
-  onFailedSelection: (event) =>
+  onFailedSelection: (event) ->
     @adder.hide()
 
 
