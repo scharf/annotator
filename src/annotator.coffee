@@ -527,8 +527,8 @@ class Annotator extends Delegator
   findAnchor: (target) ->
     unless target?
       throw new Error "Trying to find anchor for null target!"
-    console.log "Trying to find anchor for target: "
-    console.log target
+#    console.log "Trying to find anchor for target: "
+#    console.log target
 
     strategies = [
       # Simple strategy based on DOM Range
@@ -554,7 +554,7 @@ class Annotator extends Delegator
     anchor = null
     for fn in strategies
       try
-        anchor ?= fn.call this, target
+        anchor?=fn.call this, target
       catch error
         unless error instanceof Range.RangeError
           throw error
