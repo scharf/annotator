@@ -554,7 +554,7 @@ class Annotator extends Delegator
     anchor = null
     for fn in strategies
       try
-        anchor?=fn.call this, target
+        anchor ?= fn.call this, target
       catch error
         unless error instanceof Range.RangeError
           throw error
@@ -883,15 +883,22 @@ class Annotator extends Delegator
     for range in @selectedRanges
       container = range.commonAncestor
       if $(container).hasClass('annotator-hl')
-        container = $(container).parents('[class!=annotator-hl]')[0]
+        container = $(container).parents(':not([class^=annotator-hl])')[0]
       return if this.isAnnotator(container)
 
     if event and @selectedRanges.length
-      @adder
-        .css(Util.mousePosition(event, @wrapper[0]))
-        .show()
+      this.onSuccessfulSelection event
     else
-      @adder.hide()
+      this.onFailedSelection event
+
+  onSuccessfulSelection: (event) ->
+    @adder
+      .css(Util.mousePosition(event, @wrapper[0]))
+      .show()
+
+  onFailedSelection: (event) ->
+    @adder.hide()
+
 
   # Public: Determines if the provided element is part of the annotator plugin.
   # Useful for ignoring mouse actions on the annotator elements.
