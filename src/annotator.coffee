@@ -394,10 +394,8 @@ class Annotator extends Delegator
       if currentQuote isnt savedQuote
         console.log "Could not apply XPath selector to current document \
           because the quote has changed. (Saved quote is '#{savedQuote}'. \
-          Current quote is '#{currentQuote}'.)"
+          Current quote is '#{currentQuote}'.)", selector
         return null
-      else
-        console.log "Saved quote matches."
     else
       console.log "No saved quote, nothing to compare. Assume that it's OK."
     range: normalizedRange
@@ -416,10 +414,10 @@ class Annotator extends Delegator
       if currentQuote isnt savedQuote
         console.log "Could not apply position selector to current document \
           because the quote has changed. (Saved quote is '#{savedQuote}'. \
-          Current quote is '#{currentQuote}'.)"
+          Current quote is '#{currentQuote}'.)", selector
         return null
       else
-        console.log "Saved quote matches."
+        console.log "PositionSelector: Saved quote matches."
     else
       console.log "No saved quote, nothing to compare. Assume that it's okay."
 
