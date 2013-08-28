@@ -436,6 +436,7 @@ class Annotator extends Delegator
       contextMatchDistance: @domMapper.getDocLength() * 2
       contextMatchThreshold: 0.5
       patternMatchThreshold: 0.5
+      flexContext: true
     result = @domMatcher.searchFuzzyWithContext prefix, suffix, quote,
       expectedStart, expectedEnd, false, null, options
 
@@ -446,7 +447,7 @@ class Annotator extends Delegator
 
     # here is our result
     match = result.matches[0]
-    console.log "Fuzzy found match:"
+    console.log "2-phase fuzzy found match:"
     console.log match
 
     # convert it to a Range
@@ -493,7 +494,7 @@ class Annotator extends Delegator
 
     # here is our result
     match = result.matches[0]
-    console.log "Fuzzy found match:"
+    console.log "1-phase fuzzy found match:"
     console.log match
 
     # convert it to a Range
