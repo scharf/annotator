@@ -458,6 +458,7 @@ class Annotator extends Delegator
       range: normalizedRange
       quote: unless match.exact then match.found
       diffHTML: unless match.exact then match.comparison.diffHTML
+      diffCaseOnly: unless match.exact then match.exactExceptCase
 
     anchor
 
@@ -504,6 +505,7 @@ class Annotator extends Delegator
       range: normalizedRange
       quote: unless match.exact then match.found
       diffHTML: unless match.exact then match.comparison.diffHTML
+      diffCaseOnly: unless match.exact then match.exactExceptCase
 
     anchor
 
@@ -589,6 +591,7 @@ class Annotator extends Delegator
         if anchor?
           t.quote = anchor.quote or $.trim(anchor.range.text())
           t.diffHTML = anchor.diffHTML
+          t.diffCaseOnly = anchor.diffCaseOnly
           normedRanges.push anchor.range
           annotation.quote.push t.quote
         else
