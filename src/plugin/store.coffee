@@ -102,6 +102,12 @@ class Annotator.Plugin.Store extends Annotator.Plugin
   pluginInit: ->
     return unless Annotator.supported()
 
+    # https://github.com/okfn/annotator/issues/263
+    if @annotator.plugins.Document and @options.loadFromSearch
+      uris=@annotator.plugins.Document.uris()
+      if uris
+        @options.loadFromSearch.links=uris.join(' ')
+
     if @annotator.plugins.Auth
       @annotator.plugins.Auth.withToken(this._getAnnotations)
     else
