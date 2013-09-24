@@ -583,6 +583,10 @@ class window.DomTextMapper
     until sourceStart? and sourceEnd?
       sc = sourceText[sourceIndex]
       dc = displayText[displayIndex]
+
+      if sc is undefined
+         throw new Error "BUG https://github.com/hypothesis/dom-text-mapper/issues/12 sourceIndex=#{sourceIndex} dc=#{dc}"
+
       if sc is dc
         if displayIndex is displayStart
           sourceStart = sourceIndex
