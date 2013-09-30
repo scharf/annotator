@@ -25,6 +25,7 @@
     <script src="lib/plugin/annotateitpermissions.js"></script>
     <script src="lib/plugin/auth.js"></script>
     <script src="lib/plugin/tags.js"></script>
+    <script src="lib/plugin/fuzzyanchoring.js"></script>
     <script src="lib/plugin/unsupported.js"></script>
     <script src="lib/plugin/filter.js"></script>
 
@@ -107,6 +108,7 @@
           })
           .addPlugin('Unsupported')
           .addPlugin('AnnotateItPermissions')
+          .addPlugin('FuzzyAnchoring')
           .addPlugin('Store', {
             prefix: 'http://localhost:5000',
             loadFromSearch: {

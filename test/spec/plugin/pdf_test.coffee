@@ -1,0 +1,2 @@
+describe 'Annotator.Plugin.PDF', ->
+
