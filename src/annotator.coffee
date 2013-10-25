@@ -209,6 +209,10 @@ class Annotator extends Delegator
     @viewer.destroy()
     @editor.destroy()
 
+    for object in Annotator.destroyables
+      object.destroy()
+    Annotator.destroyables = []
+
     @wrapper.find('.annotator-hl').each ->
       $(this).contents().insertBefore(this)
       $(this).remove()
@@ -1092,6 +1096,9 @@ if not g.Node?
 
 # Bind our local copy of jQuery so plugins can use the extensions.
 Annotator.$ = $
+
+# add to this list to be destroyed when annotator is destroyed
+Annotator.destroyables = []
 
 # Export other modules for use in plugins.
 Annotator.Delegator = Delegator

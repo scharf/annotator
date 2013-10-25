@@ -1,4 +1,5 @@
 Annotator = Annotator || {}
+$ = jQuery
 
 # Public: A simple notification system that can be used to display information,
 # warnings and errors to the user. Display of notifications are controlled
@@ -36,6 +37,10 @@ class Annotator.Notification extends Delegator
   constructor: (options) ->
     super $(@options.html).appendTo(document.body)[0], options
 
+  destroy: ->
+    if @element
+      @element.remove()
+      delete @element
   # Public: Displays the annotation with message and optional status. The
   # message will hide itself after 5 seconds or if the user clicks on it.
   #
@@ -53,6 +58,9 @@ class Annotator.Notification extends Delegator
   #
   # Returns itself.
   show: (message, status=Annotator.Notification.INFO) =>
+    if not @element
+      @element = $(@options.html).appendTo(document.body)[0]
+      Annotator.destroyables.push this
     $(@element)
       .addClass(@options.classes.show)
       .addClass(@options.classes[status])
@@ -70,6 +78,8 @@ class Annotator.Notification extends Delegator
   #
   # Returns itself.
   hide: =>
+    if not @element
+      return this
     $(@element).removeClass(@options.classes.show)
     this
 
@@ -82,7 +92,7 @@ Annotator.Notification.ERROR   = 'error'
 # Attach notification methods to the Annotation object on document ready.
 $(->
   notification = new Annotator.Notification
-
+  Annotator.destroyables.push notification
   Annotator.showNotification = notification.show
   Annotator.hideNotification = notification.hide
 )
