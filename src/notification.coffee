@@ -1,4 +1,3 @@
-Annotator = Annotator || {}
 $ = jQuery
 
 # Public: A simple notification system that can be used to display information,

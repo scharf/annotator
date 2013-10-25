@@ -243,3 +243,5 @@ Delegator.natives = do ->
 Delegator._isCustomEvent = (event) ->
   [event] = event.split('.')
   $.inArray(event, Delegator.natives) == -1
+
+this.Delegator = Delegator

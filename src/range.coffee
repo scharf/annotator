@@ -458,3 +458,5 @@ class Range.SerializedRange
       end: @end
       endOffset: @endOffset
     }
+
+this.Range = Range

@@ -60,10 +60,11 @@ Util.getTextNodes = (jq) ->
   jq.map -> Util.flatten(getTextNodes(this))
 
 Util.xpathFromNode = (el, relativeRoot) ->
+  simpleXPathJQuery.call el, relativeRoot
   try
     result = simpleXPathJQuery.call el, relativeRoot
   catch exception
-    console.log "jQuery-based XPath construction failed! Falling back to manual."
+    console.log "jQuery-based XPath construction failed! Falling back to manual.",exception
     result = simpleXPathPure.call el, relativeRoot
   result
 
@@ -111,3 +112,6 @@ Util.mousePosition = (e, offsetEl) ->
 # where the existance of the parameter must be checked before calling.
 Util.preventEventDefault = (event) ->
   event?.preventDefault?()
+
+this.Util=Util
+this._t=_t

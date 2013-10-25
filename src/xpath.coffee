@@ -76,3 +76,7 @@ getNodePosition = (node) ->
       pos++
     tmp = tmp.previousSibling
   pos
+
+this.simpleXPathPure = simpleXPathPure
+this.simpleXPathJQuery = simpleXPathJQuery
+this.findChild = findChild
