@@ -25,6 +25,8 @@ PLUGINS=\
 	plugin/permissions.coffee \
 	plugin/store.coffee \
 	plugin/tags.coffee \
+	plugin/fuzzyanchoring.coffee \
+	plugin/pdf.coffee \
 	plugin/unsupported.coffee
 
 ANNOTATOR_FULL=\

@@ -26,6 +26,9 @@
 
     <!-- The following plugins are entirely optional -->
 
+    <!-- The Fuzzy matching plugin. Handles changed document content. -->
+    <script src="pkg/annotator.fuzzyanchoring.min.js"></script>
+
     <!-- The Store plugin. Saves annotations to a remote backend -->
     <script src="pkg/annotator.store.min.js"></script>
 
@@ -91,6 +94,7 @@
           $('#airlock').annotator()
                        .annotator('addPlugin', 'Permissions')
                        .annotator('addPlugin', 'Markdown')
+                       .annotator('addPlugin', 'FuzzyAnchoring')
                        .annotator('addPlugin', 'Tags');
 
           $('#airlock').data('annotator').plugins['Permissions'].setUser("Joe Bloggs");
