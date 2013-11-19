@@ -12,6 +12,7 @@ class Annotator.Notification extends Delegator
 
   # Default options.
   options:
+    timeout: 5000
     html: "<div class='annotator-notice'></div>"
     classes:
       show:    "annotator-notice-show"
@@ -65,7 +66,7 @@ class Annotator.Notification extends Delegator
       .addClass(@options.classes[status])
       .html(Util.escape(message || ""))
 
-    setTimeout this.hide, 5000
+    setTimeout this.hide, @options.timeout
     this
 
   # Public: Hides the notification.
