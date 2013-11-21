@@ -39,6 +39,16 @@ util =
 # Store a reference to the current Annotator object.
 _Annotator = this.Annotator
 
+# Fake two-phase / pagination support, used for HTML documents
+class DummyDocumentAccess
+
+  @applicable: -> true
+  getPageIndex: -> 0
+  getPageCount: -> 1
+  getPageIndexForPos: -> 0
+  isPageMapped: -> true
+  scan: ->
+
 class Annotator extends Delegator
   # Events to be bound on Annotator#element.
   events:
@@ -113,11 +123,10 @@ class Annotator extends Delegator
   # Initializes the available document access strategies
   _setupDocumentAccessStrategies: ->
     @documentAccessStrategies = [
-      # Default strategy for simple HTML documents.
-      # Also the generic fallback.
+      # Default dummy strategy for simple HTML documents.
+      # The generic fallback.
       name: "DOM generic"
-      mapper: DomTextMapper
-      init: => @domMapper.setRootNode @wrapper[0]
+      mapper: DummyDocumentAccess
     ]
 
     this

@@ -27,6 +27,7 @@ PLUGINS=\
 	plugin/permissions.coffee \
 	plugin/store.coffee \
 	plugin/tags.coffee \
+	plugin/domtextmapper.coffee \
 	plugin/textanchors.coffee \
 	plugin/fuzzytextanchors.coffee \
 	plugin/pdf.coffee \

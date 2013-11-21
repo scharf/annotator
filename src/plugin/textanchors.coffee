@@ -160,6 +160,10 @@ class Annotator.Plugin.TextAnchors extends Annotator.Plugin
 
   # Plugin initialization
   pluginInit: ->
+    # Do we have the basic text anchors plugin loaded?
+    unless @annotator.plugins.DomTextMapper
+      throw "The TextAnchors Annotator plugin requires the DomTextMapper plugin."
+
     @Annotator = Annotator
     @$ = Annotator.$
         
