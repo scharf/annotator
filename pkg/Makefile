@@ -28,6 +28,7 @@ PLUGINS=\
 	plugin/store.coffee \
 	plugin/tags.coffee \
 	plugin/domtextmapper.coffee \
+	plugin/texthighlights.coffee \
 	plugin/textanchors.coffee \
 	plugin/fuzzytextanchors.coffee \
 	plugin/pdf.coffee \

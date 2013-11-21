@@ -5,129 +5,6 @@
 #  * the anchor class,
 #  * the basic anchoring strategies
 
-# Simple text highlight
-class TextHighlight extends Annotator.Highlight
-
-  # Save the Annotator class reference, while we have access to it.
-  # TODO: Is this really the way to go? How do other plugins do it?
-  @Annotator = Annotator
-  @$ = Annotator.$
-  @highlightType = 'TextHighlight'
-
-  # Is this element a text highlight physical anchor ?
-  @isInstance: (element) -> @$(element).hasClass 'annotator-hl'
-
-  # Find the first parent outside this physical anchor
-  @getIndependentParent: (element) ->
-    @$(element).parents(':not([class^=annotator-hl])')[0]
-
-  # List of annotators we have already set up events for
-  @_inited: []
-
-  # Set up events for this annotator
-  @_init: (annotator) ->
-    return if annotator in @_inited
-
-    getAnnotations = (event) ->
-      annotations = @$(event.target)
-        .parents('.annotator-hl')
-        .andSelf()
-        .map -> return TextHighlight.$(this).data("annotation")
-
-    annotator.addEvent ".annotator-hl", "mouseover", (event) =>
-      annotator.onAnchorMouseover getAnnotations event, @highlightType
-
-    annotator.addEvent ".annotator-hl", "mouseout", (event) =>
-      annotator.onAnchorMouseout getAnnotations event, @highlightType
-
-    annotator.addEvent ".annotator-hl", "mousedown", (event) =>
-      annotator.onAnchorMousedown getAnnotations event, @highlightType
-
-    annotator.addEvent ".annotator-hl", "click", (event) =>
-      annotator.onAnchorClick getAnnotations event, @highlightType
-
-    @_inited.push annotator
-
-  # Public: Wraps the DOM Nodes within the provided range with a highlight
-  # element of the specified class and returns the highlight Elements.
-  #
-  # normedRange - A NormalizedRange to be highlighted.
-  # cssClass - A CSS class to use for the highlight (default: 'annotator-hl')
-  #
-  # Returns an array of highlight Elements.
-  _highlightRange: (normedRange, cssClass='annotator-hl') ->
-    white = /^\s*$/
-
-    hl = @$("<span class='#{cssClass}'></span>")
-
-    # Ignore text nodes that contain only whitespace characters. This prevents
-    # spans being injected between elements that can only contain a restricted
-    # subset of nodes such as table rows and lists. This does mean that there
-    # may be the odd abandoned whitespace node in a paragraph that is skipped
-    # but better than breaking table layouts.
-
-    for node in normedRange.textNodes() when not white.test node.nodeValue
-      r = @$(node).wrapAll(hl).parent().show()[0]
-      window.DomTextMapper.changed node, "created hilite"
-      r
-
-  # Public: highlight a list of ranges
-  #
-  # normedRanges - An array of NormalizedRanges to be highlighted.
-  # cssClass - A CSS class to use for the highlight (default: 'annotator-hl')
-  #
-  # Returns an array of highlight Elements.
-  _highlightRanges: (normedRanges, cssClass='annotator-hl') ->
-    highlights = []
-    for r in normedRanges
-      @$.merge highlights, this._highlightRange(r, cssClass)
-    highlights
-
-  constructor: (anchor, pageIndex, normedRange) ->
-    super anchor, pageIndex
-    TextHighlight._init @annotator
-
-    @$ = TextHighlight.$
-    @Annotator = TextHighlight.Annotator
-
-    # Create a highlights, and link them with the annotation
-    @_highlights = @_highlightRange normedRange
-    @$(@_highlights).data "annotation", @annotation
-
-  # Implementing the required APIs
-
-  # Is this a temporary hl?
-  isTemporary: -> @_temporary
-
-  # Mark/unmark this hl as active
-  setTemporary: (value) ->
-    @_temporary = value
-    if value
-      @$(@_highlights).addClass('annotator-hl-temporary')
-    else
-      @$(@_highlights).removeClass('annotator-hl-temporary')
-
-  # Mark/unmark this hl as active
-  setActive: (value) ->
-    if value
-      @$(@_highlights).addClass('annotator-hl-active')
-    else
-      @$(@_highlights).removeClass('annotator-hl-active')
-
-  # Remove all traces of this hl from the document
-  removeFromDocument: ->
-    for hl in @_highlights
-      # Is this highlight actually the part of the document?
-      if hl.parentNode? and @annotator.domMapper.isPageMapped @pageIndex
-        # We should restore original state
-        child = hl.childNodes[0]
-        @$(hl).replaceWith hl.childNodes
-        window.DomTextMapper.changed child.parentNode,
-          "removed hilite (annotation deleted)"
-
-  # Get the HTML elements making up the highlight
-  _getDOMElements: -> @_highlights
-
 class TextRangeAnchor extends Annotator.Anchor
 
   @Annotator = Annotator
@@ -143,6 +20,8 @@ class TextRangeAnchor extends Annotator.Anchor
     unless @start? then throw "start is required!"
     unless @end? then throw "end is required!"
 
+    @Annotator = TextRangeAnchor.Annotator
+
   # This is how we create a highlight out of this kind of anchor
   _createHighlight: (page) ->
 
@@ -153,13 +32,13 @@ class TextRangeAnchor extends Annotator.Anchor
     realRange = mappings.sections[page].realRange
 
     # Get a BrowserRange
-    browserRange = new TextRangeAnchor.Annotator.Range.BrowserRange realRange
+    browserRange = new @Annotator.Range.BrowserRange realRange
 
     # Get a NormalizedRange
     normedRange = browserRange.normalize @annotator.wrapper[0]
 
     # Create the highligh
-    new TextHighlight this, page, normedRange
+    new @Annotator.TextHighlight this, page, normedRange
 
 class Annotator.Plugin.TextAnchors extends Annotator.Plugin
 
@@ -168,6 +47,8 @@ class Annotator.Plugin.TextAnchors extends Annotator.Plugin
     # Do we have the basic text anchors plugin loaded?
     unless @annotator.plugins.DomTextMapper
       throw "The TextAnchors Annotator plugin requires the DomTextMapper plugin."
+    unless @annotator.plugins.TextHighlights
+      throw "The TextAnchors Annotator plugin requires the TextHighlights plugin."
 
     @Annotator = Annotator
     @$ = Annotator.$
@@ -266,8 +147,8 @@ class Annotator.Plugin.TextAnchors extends Annotator.Plugin
     for range in selectedRanges
       container = range.commonAncestor
       # TODO: what is selection ends inside a different type of highlight?
-      if TextHighlight.isInstance container
-        container = TextHighlight.getIndependentParent container
+      if @Annotator.TextHighlight.isInstance container
+        container = @Annotator.TextHighlight.getIndependentParent container
       return if @annotator.isAnnotator(container)
 
     if selectedRanges.length
