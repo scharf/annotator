@@ -83,18 +83,15 @@ class TextHighlight extends Annotator.Highlight
       @$.merge highlights, this._highlightRange(r, cssClass)
     highlights
 
-  constructor: (anchor, pageIndex, realRange) ->
+  constructor: (anchor, pageIndex, normedRange) ->
     super anchor, pageIndex
     TextHighlight._init @annotator
 
     @$ = TextHighlight.$
     @Annotator = TextHighlight.Annotator
 
-    browserRange = new @Annotator.Range.BrowserRange realRange
-    range = browserRange.normalize @annotator.wrapper[0]
-
     # Create a highlights, and link them with the annotation
-    @_highlights = @_highlightRange range
+    @_highlights = @_highlightRange normedRange
     @$(@_highlights).data "annotation", @annotation
 
   # Implementing the required APIs
@@ -133,6 +130,8 @@ class TextHighlight extends Annotator.Highlight
 
 class TextRangeAnchor extends Annotator.Anchor
 
+  @Annotator = Annotator
+
   constructor: (annotator, annotation, target,
       @start, @end, startPage, endPage,
       quote, diffHTML, diffCaseOnly) ->
@@ -151,10 +150,16 @@ class TextRangeAnchor extends Annotator.Anchor
     mappings = @annotator.domMapper.getMappingsForCharRange @start, @end, [page]
 
     # Get the wanted range
-    range = mappings.sections[page].realRange
+    realRange = mappings.sections[page].realRange
+
+    # Get a BrowserRange
+    browserRange = new TextRangeAnchor.Annotator.Range.BrowserRange realRange
+
+    # Get a NormalizedRange
+    normedRange = browserRange.normalize @annotator.wrapper[0]
 
     # Create the highligh
-    new TextHighlight this, page, range
+    new TextHighlight this, page, normedRange
 
 class Annotator.Plugin.TextAnchors extends Annotator.Plugin
 
