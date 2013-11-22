@@ -51,6 +51,9 @@ class Annotator.Plugin.OldTextAnchors extends Annotator.Plugin
     # Export this anchor type
     @annotator.TextRangeAnchor = TextRangeAnchor
 
+    # Configure quote comparison behavior
+    @verifyQuote = @options.verifyQuote ? true
+
     null
 
 
@@ -149,14 +152,8 @@ class Annotator.Plugin.OldTextAnchors extends Annotator.Plugin
     unless range?
       throw new Error "Called getTextQuoteSelector(range) with null range!"
 
-    rangeStart = range.start
-    unless rangeStart?
-      throw new Error "Called getTextQuoteSelector(range) on a range with no valid start."
-
-    quote = "whatever" # TODO: How to get a quote from a range?
-
     type: "TextQuoteSelector"
-    exact: quote
+    exact: range.text().trim()
 
   # Create a target around a normalizedRange
   getTargetFromRange: (range) ->
@@ -177,31 +174,30 @@ class Annotator.Plugin.OldTextAnchors extends Annotator.Plugin
       null
 
   # Create and anchor using the saved Range selector. The quote is verified.
-  createFromRangeSelector: (annotation, target) ->
-    selector = @findSelector target.selector, "RangeSelector"
+  createFromRangeSelector: (annotation, target) =>
+    selector = @annotator.findSelector target.selector, "RangeSelector"
     unless selector? then return null
 
     # Try to apply the saved XPath
     try
-      normedRange = @Annotator.Range.sniff(selector).normalize @wrapper[0]
+      normedRange = @Annotator.Range.sniff(selector).normalize @annotator.wrapper[0]
     catch error
 #      console.log "Could not apply XPath selector to current document, " +
 #        "because the structure has changed."
-      console.log selector
-      console.log error, error.message, error.stack
       return null
 
-    content = "whatever" # TODO: how to get a quote from a normed range?
-    currentQuote = @normalizeString content
+    # Get the content of this range
+    currentQuote = @annotator.normalizeString normedRange.text().trim()
 
-    # Look up the saved quote
-    savedQuote = @plugins.OldTextAnchors.getQuoteForTarget target
-    if savedQuote? and currentQuote isnt savedQuote
-      console.log "Could not apply XPath selector to current document, " +
-        "because the quote has changed. (Saved quote is '#{savedQuote}'." +
-        " Current quote is '#{currentQuote}'.)"
-      return null
+    if @verifyQuote
+      # Look up the saved quote
+      savedQuote = @getQuoteForTarget target
+      if savedQuote? and currentQuote isnt savedQuote
+#        console.log "Could not apply XPath selector to current document, " +
+#          "because the quote has changed. (Saved quote is '#{savedQuote}'." +
+#          " Current quote is '#{currentQuote}'.)"
+        return null
 
     # Create a TextRangeAnchor from this range
-    new TextRangeAnchor this, annotation, target, normedRange, currentQuote
+    new TextRangeAnchor @annotator, annotation, target, normedRange, currentQuote
 
