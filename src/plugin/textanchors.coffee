@@ -226,10 +226,8 @@ class Annotator.Plugin.TextAnchors extends Annotator.Plugin
 
     # Try to apply the saved XPath
     try
-      normalizedRange = Range.sniff(selector).normalize @wrapper[0]
+      normalizedRange = @Annotator.Range.sniff(selector).normalize @wrapper[0]
     catch error
-      #console.log "Could not apply XPath selector to current document, " +
-      #  "because the structure has changed."
       return null
     startInfo = @domMapper.getInfoForNode normalizedRange.start
     startOffset = startInfo.start
