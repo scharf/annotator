@@ -4,6 +4,8 @@
 #  * the anchor class,
 #  * the basic anchoring strategies
 
+# This anhor type stores information about a piece of text,
+# described using start and end character offsets
 class TextPositionAnchor extends Annotator.Anchor
 
   @Annotator = Annotator
@@ -16,6 +18,8 @@ class TextPositionAnchor extends Annotator.Anchor
       startPage, endPage,
       quote, diffHTML, diffCaseOnly
 
+    # This pair of offsets is the key information,
+    # upon which this anchor is based upon.
     unless @start? then throw "start is required!"
     unless @end? then throw "end is required!"
 
@@ -24,10 +28,10 @@ class TextPositionAnchor extends Annotator.Anchor
   # This is how we create a highlight out of this kind of anchor
   _createHighlight: (page) ->
 
-    # First calculate the ranges
+    # First we create the range from the stored stard and end offsets
     mappings = @annotator.domMapper.getMappingsForCharRange @start, @end, [page]
 
-    # Get the wanted range
+    # Get the wanted range out of the response of DTM
     realRange = mappings.sections[page].realRange
 
     # Get a BrowserRange
@@ -39,6 +43,18 @@ class TextPositionAnchor extends Annotator.Anchor
     # Create the highligh
     new @Annotator.TextHighlight this, page, normedRange
 
+# This anhor type stores information about a piece of text,
+# described using the actual reference to the range in the DOM.
+# 
+# When creating this kind of anchor, you are supposed to pass
+# in a NormalizedRange object, which should cover exactly
+# the wanted piece of text; no character offset correction is supported.
+#
+# Also, please note that these anchors can not really be virtualized,
+# because they don't have any truly DOM-independent information;
+# the core information stored is the reference to an object which
+# lives in the DOM. Therefore, no lazy loading is possible with
+# this kind of anchor. For that, use TextPositionAnchor instead.
 class TextRangeAnchor extends Annotator.Anchor
 
   @Annotator = Annotator
@@ -292,13 +308,16 @@ class Annotator.Plugin.TextAnchors extends Annotator.Plugin
       return null
 
     if @useDTM
-      # Create a TextPositionAnchor from this range (to be used with DTM)
+      # Create a TextPositionAnchor from the start and end offsets
+      # of this range
+      # (to be used with dom-text-mapper)
       new TextPositionAnchor @annotator, annotation, target,
         startInfo.start, endInfo.end,
         (startInfo.pageIndex ? 0), (endInfo.pageIndex ? 0),
         currentQuote
     else
       # Create a TextRangeAnchor from this range
+      # (to be used whithout dom-text-mapper)
       new TextRangeAnchor @annotator, annotation, target,
         normedRange, currentQuote
 
