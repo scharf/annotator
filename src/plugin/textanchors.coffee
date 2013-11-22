@@ -5,7 +5,7 @@
 #  * the anchor class,
 #  * the basic anchoring strategies
 
-class TextRangeAnchor extends Annotator.Anchor
+class TextPositionAnchor extends Annotator.Anchor
 
   @Annotator = Annotator
 
@@ -20,7 +20,7 @@ class TextRangeAnchor extends Annotator.Anchor
     unless @start? then throw "start is required!"
     unless @end? then throw "end is required!"
 
-    @Annotator = TextRangeAnchor.Annotator
+    @Annotator = TextPositionAnchor.Annotator
 
   # This is how we create a highlight out of this kind of anchor
   _createHighlight: (page) ->
@@ -72,7 +72,7 @@ class Annotator.Plugin.TextAnchors extends Annotator.Plugin
     })
 
     # Export this anchor type
-    @annotator.TextRangeAnchor = TextRangeAnchor
+    @annotator.TextPositionAnchor = TextPositionAnchor
 
     null
 
@@ -243,8 +243,8 @@ class Annotator.Plugin.TextAnchors extends Annotator.Plugin
       #  " Current quote is '#{currentQuote}'.)"
       return null
 
-    # Create a TextRangeAnchor from this range
-    new TextRangeAnchor this, annotation, target,
+    # Create a TextPositionAnchor from this range
+    new TextPositionAnchor this, annotation, target,
       startInfo.start, endInfo.end,
       (startInfo.pageIndex ? 0), (endInfo.pageIndex ? 0),
       currentQuote
@@ -265,8 +265,8 @@ class Annotator.Plugin.TextAnchors extends Annotator.Plugin
       #  " Current quote is '#{currentQuote}'.)"
       return null
 
-    # Create a TextRangeAnchor from this data
-    new TextRangeAnchor this, annotation, target,
+    # Create a TextPositionAnchor from this data
+    new TextPositionAnchor this, annotation, target,
       selector.start, selector.end,
       (@domMapper.getPageIndexForPos selector.start),
       (@domMapper.getPageIndexForPos selector.end),
