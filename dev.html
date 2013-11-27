@@ -14,6 +14,8 @@
     <script src="lib/console.js"></script>
     <script src="lib/class.js"></script>
     <script src="lib/range.js"></script>
+    <script src="lib/anchors.js"></script>
+    <script src="lib/highlights.js"></script>
     <script src="lib/annotator.js"></script>
     <script src="lib/widget.js"></script>
     <script src="lib/editor.js"></script>
@@ -25,7 +27,10 @@
     <script src="lib/plugin/annotateitpermissions.js"></script>
     <script src="lib/plugin/auth.js"></script>
     <script src="lib/plugin/tags.js"></script>
-    <script src="lib/plugin/fuzzyanchoring.js"></script>
+    <script src="lib/plugin/texthighlights.js"></script>
+    <script src="lib/plugin/domtextmapper.js"></script>
+    <script src="lib/plugin/textanchors.js"></script>
+    <script src="lib/plugin/fuzzytextanchors.js"></script>
     <script src="lib/plugin/unsupported.js"></script>
     <script src="lib/plugin/filter.js"></script>
 
@@ -108,7 +113,10 @@
           })
           .addPlugin('Unsupported')
           .addPlugin('AnnotateItPermissions')
-          .addPlugin('FuzzyAnchoring')
+          .addPlugin('TextHighlights')
+          .addPlugin('DomTextMapper')
+          .addPlugin('TextAnchors')
+          .addPlugin('FuzzyTextAnchors')
           .addPlugin('Store', {
             prefix: 'http://localhost:5000',
             loadFromSearch: {
