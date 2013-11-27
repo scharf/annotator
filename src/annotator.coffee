@@ -467,7 +467,7 @@ class Annotator extends Delegator
 
     if annotations.length # Do we have to do something?
       # Do we have a doc access strategy? If we don't have it yet, scan!
-      @_scan() unless @domMapper
+      @_scan() unless @domMapper or @options.noMatching
       if @pendingScan?    # Is there a pending scan?
         # Schedule the parsing the annotations for
         # when scan has finished
