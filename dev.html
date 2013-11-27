@@ -107,7 +107,7 @@
       (function ($) {
         var elem = document.getElementById('airlock');
 
-        devAnnotator = new Annotator(elem)
+        devAnnotator = new Annotator(elem, {noScan: true})
           .addPlugin('Auth', {
             tokenUrl: 'http://localhost:5001/api/token'
           })
