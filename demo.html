@@ -26,8 +26,13 @@
 
     <!-- The following plugins are entirely optional -->
 
-    <!-- The Fuzzy matching plugin. Handles changed document content. -->
-    <script src="pkg/annotator.fuzzyanchoring.min.js"></script>
+    <!-- Plugins required for basic text annotationg. -->
+    <script src="pkg/annotator.domtextmapper.min.js"></script>
+    <script src="pkg/annotator.texthighlights.min.js"></script>
+    <script src="pkg/annotator.textanchors.min.js"></script>
+
+    <!-- The Fuzzy tech anchoring plugin. Handles changed content. -->
+    <script src="pkg/annotator.fuzzytextanchors.min.js"></script>
 
     <!-- The Store plugin. Saves annotations to a remote backend -->
     <script src="pkg/annotator.store.min.js"></script>
@@ -91,13 +96,18 @@
         } else {
           // This is the important bit: how to create the annotator and add
           // plugins
-          $('#airlock').annotator()
+          $('#airlock').annotator({noScan:true})
                        .annotator('addPlugin', 'Permissions')
                        .annotator('addPlugin', 'Markdown')
-                       .annotator('addPlugin', 'FuzzyAnchoring')
+                       .annotator('addPlugin', 'DomTextMapper')
+                       .annotator('addPlugin', 'TextHighlights')
+                       .annotator('addPlugin', 'TextAnchors')
+                       .annotator('addPlugin', 'FuzzyTextAnchors')
                        .annotator('addPlugin', 'Tags');
 
           $('#airlock').data('annotator').plugins['Permissions'].setUser("Joe Bloggs");
+          $('#airlock').data('annotator')._scan();
+
         }
       });
     </script>
