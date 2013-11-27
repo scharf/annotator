@@ -132,7 +132,7 @@ class Annotator extends Delegator
     this
 
   # Initializes the components used for analyzing the document
-  _setupMapper: ->
+  _chooseAccessPolicy: ->
     if @domMapper? then return
 
     # Go over the available strategies
@@ -152,9 +152,8 @@ class Annotator extends Delegator
 
   # Perform a scan of the DOM. Required for finding anchors.
   _scan: ->
-    unless @domMapper     # If we haven't yet created a document mapper,
-      this._setupMapper() # do so now.
-
+    # If we haven't yet chosen a document access strategy, do so now.
+    this._chooseAccessPolicy() unless @domMapper
     @pendingScan = @domMapper.scan()
 
   # Wraps the children of @element in a @wrapper div. NOTE: This method will also
@@ -459,6 +458,8 @@ class Annotator extends Delegator
     clone = annotations.slice()
 
     if annotations.length # Do we have to do something?
+      # Do we have a doc access strategy? If we don't have it yet, scan!
+      @_scan() unless @domMapper
       if @pendingScan?    # Is there a pending scan?
         # Schedule the parsing the annotations for
         # when scan has finished
