@@ -72,7 +72,7 @@ class Annotator extends Delegator
 
   mouseIsDown: false
 
-  ignoreMouseup: false
+  canAnnotate: true
 
   viewerHideTimer: null
 
@@ -263,6 +263,14 @@ class Annotator extends Delegator
     ].join("\n")
 
     this
+
+  # Enables or disables the creation of annotations
+  #
+  # When it's set to false, nobody os supposed to call
+  # onSuccessfulSelection()
+  setEnableAnnotating: (value) ->
+    this.publish "enableAnnotating", value
+    @canAnnotate = value
 
   getHref: =>
     uri = decodeURIComponent document.location.href
@@ -535,13 +543,13 @@ class Annotator extends Delegator
     this
 
   # Callback method called when the @editor fires the "hide" event. Itself
-  # publishes the 'annotationEditorHidden' event and resets the @ignoreMouseup
-  # property to allow listening to mouse events.
+  # publishes the 'annotationEditorHidden' event and sets the @canAnnotate
+  # property to allow the creation of new annotations
   #
   # Returns nothing.
   onEditorHide: =>
     this.publish('annotationEditorHidden', [@editor])
-    @ignoreMouseup = false
+    this.setEnableAnnotating true
 
   # Callback method called when the @editor fires the "save" event. Itself
   # publishes the 'annotationEditorSubmit' event and creates/updates the
@@ -640,7 +648,7 @@ class Annotator extends Delegator
   isAnnotator: (element) ->
     !!$(element).parents().andSelf().filter('[class^=annotator-]').not(@wrapper).length
 
-  # Annotator#element callback. Sets @ignoreMouseup to true to prevent
+  # Annotator#element callback. Sets the @canAnnotate to false to prevent
   # the annotation selection events firing when the adder is clicked.
   #
   # event - A mousedown Event object
@@ -648,7 +656,7 @@ class Annotator extends Delegator
   # Returns nothing.
   onAdderMousedown: (event) =>
     event?.preventDefault()
-    @ignoreMouseup = true
+    this.setEnableAnnotating false
 
   # Annotator#element callback. Displays the @editor in place of the @adder and
   # loads in a newly created annotation Object. The click event is used as well

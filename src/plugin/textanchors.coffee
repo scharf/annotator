@@ -167,7 +167,7 @@ class Annotator.Plugin.TextAnchors extends Annotator.Plugin
   # This is called then the mouse is released.
   # Checks to see if a selection has been made on mouseup and if so,
   # calls Annotator's onSuccessfulSelection method.
-  # If @ignoreMouseup is set, will do nothing.
+  # If annotator.canAnnotate is not set, will do nothing.
   # Also resets the @mouseIsDown property.
   #
   # event - A mouseup Event object.
@@ -178,7 +178,7 @@ class Annotator.Plugin.TextAnchors extends Annotator.Plugin
 
     # This prevents the note image from jumping away on the mouseup
     # of a click on icon.
-    return if @annotator.ignoreMouseup
+    return unless @annotator.canAnnotate
 
     # Get the currently selected ranges.
     selectedRanges = @_getSelectedRanges()
