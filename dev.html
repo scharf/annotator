@@ -127,6 +127,8 @@
             }
           });
 
+        devAnnotator._scan()
+
         devAnnotator.plugins.Auth.withToken(function (tok) {
           console.log(tok);
         })
