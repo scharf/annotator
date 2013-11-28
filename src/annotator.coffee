@@ -72,7 +72,7 @@ class Annotator extends Delegator
 
   mouseIsDown: false
 
-  canAnnotate: true
+  canAnnotate: false
 
   viewerHideTimer: null
 
@@ -155,6 +155,12 @@ class Annotator extends Delegator
     # If we haven't yet chosen a document access strategy, do so now.
     this._chooseAccessPolicy() unless @domMapper
     @pendingScan = @domMapper.scan()
+    if @pendingScan?
+      console.log "Waiting for scan to end, then enabling annotating"
+      @pendingScan.then => @enableAnnotating()
+    else
+      console.log "Scan finished, enabling annotating"
+      @enableAnnotating()
 
   # Wraps the children of @element in a @wrapper div. NOTE: This method will also
   # remove any script elements inside @element to prevent them re-executing.
@@ -268,10 +274,24 @@ class Annotator extends Delegator
   #
   # When it's set to false, nobody os supposed to call
   # onSuccessfulSelection()
-  setEnableAnnotating: (value) ->
-    this.publish "enableAnnotating", value
+  enableAnnotating: (value = true, local = true) ->
+    # If we already have this setting, do nothing
+    return if value is @canAnnotate
+
+    # Set the field
     @canAnnotate = value
 
+    # Publish an event, so that others can react
+    this.publish "enableAnnotating", value
+
+    # If this call came from "outside" (whatever it means), and annotation
+    # is now disabled, then hide the adder.
+    @adder.hide() unless value or local
+
+  # Shortcut to disable annotating
+  disableAnnotating: (local = true) -> this.enableAnnotating false, local
+
+  # Utility function to get the decoded form of the document URI
   getHref: =>
     uri = decodeURIComponent document.location.href
     if document.location.hash then uri = uri.slice 0, (-1 * location.hash.length)
@@ -549,7 +569,7 @@ class Annotator extends Delegator
   # Returns nothing.
   onEditorHide: =>
     this.publish('annotationEditorHidden', [@editor])
-    this.setEnableAnnotating true
+    this.enableAnnotating()
 
   # Callback method called when the @editor fires the "save" event. Itself
   # publishes the 'annotationEditorSubmit' event and creates/updates the
@@ -629,6 +649,7 @@ class Annotator extends Delegator
 
   onFailedSelection: (event) ->
     @adder.hide()
+    @selectedTargets = []
 
 
   # Public: Determines if the provided element is part of the annotator plugin.
@@ -656,7 +677,7 @@ class Annotator extends Delegator
   # Returns nothing.
   onAdderMousedown: (event) =>
     event?.preventDefault()
-    this.setEnableAnnotating false
+    this.disableAnnotating()
 
   # Annotator#element callback. Displays the @editor in place of the @adder and
   # loads in a newly created annotation Object. The click event is used as well
