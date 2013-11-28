@@ -654,8 +654,8 @@ class Annotator extends Delegator
 
     # Are we allowed to create annotations?
     unless @canAnnotate
-      @Annotator.showNotification "You are already editing an annotation!",
-        @Annotator.Notification.ERROR
+      #@Annotator.showNotification "You are already editing an annotation!",
+      #  @Annotator.Notification.INFO
       return false
 
     # Store the selected targets
