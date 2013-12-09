@@ -1,3 +1,5 @@
+$ = jQuery
+
 # Public: Creates an element for editing annotations.
 class Annotator.Editor extends Annotator.Widget
 

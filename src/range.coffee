@@ -1,3 +1,5 @@
+$ = jQuery
+
 Range = {}
 
 # Public: Determines the type of Range of the provided object and returns

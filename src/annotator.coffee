@@ -4,6 +4,7 @@
 # I've removed any support for IE TextRange (see commit d7085bf2 for code)
 # for the moment, having no means of testing it.
 
+$ = jQuery
 # Store a reference to the current Annotator object.
 _Annotator = this.Annotator
 

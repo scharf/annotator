@@ -1,3 +1,5 @@
+$ = jQuery
+
 # Public: Creates a Date object from an ISO8601 formatted date String.
 #
 # string - ISO8601 formatted date String.

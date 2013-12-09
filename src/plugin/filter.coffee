@@ -1,3 +1,5 @@
+$ = jQuery
+
 class Annotator.Plugin.Filter extends Annotator.Plugin
   # Events and callbacks to bind to the Filter#element.
   events:

@@ -1,3 +1,5 @@
+$ = jQuery
+
 # A simple XPath evaluator using jQuery which can evaluate queries of
 simpleXPathJQuery = (relativeRoot) ->
   jq = this.map ->

@@ -1,7 +1,7 @@
+$ = jQuery
+
 class Annotator.Plugin.Document extends Annotator.Plugin
 
-  $ = Annotator.$
-  
   events:
     'beforeAnnotationCreated': 'beforeAnnotationCreated'
 

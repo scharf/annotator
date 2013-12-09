@@ -1,3 +1,5 @@
+$ = jQuery
+
 # Public: Plugin for managing user permissions under the rather more specialised
 # permissions model used by [AnnotateIt](http://annotateit.org).
 #

@@ -1,3 +1,6 @@
+
+$ = jQuery
+
 # Public: Delegator is the base class that all of Annotators objects inherit
 # from. It provides basic functionality such as instance options, event
 # delegation and pub/sub methods.

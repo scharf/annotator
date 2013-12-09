@@ -1,3 +1,5 @@
+$ = jQuery
+
 # Public: Tags plugin allows users to tag thier annotations with metadata
 # stored in an Array on the annotation as tags.
 class Annotator.Plugin.Tags extends Annotator.Plugin

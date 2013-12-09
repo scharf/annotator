@@ -1,3 +1,5 @@
+$ = jQuery
+
 # Public: Plugin for setting permissions on newly created annotations as well as
 # managing user permissions such as viewing/editing/deleting annotions.
 #
