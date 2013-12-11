@@ -64,9 +64,9 @@ class Annotator.Notification extends Delegator
     $(@element)
       .addClass(@options.classes.show)
       .addClass(@options.classes[status])
-      .html(Util.escape(message || ""))
+      .html(message || "")
 
-    setTimeout this.hide, @options.timeout
+#    setTimeout this.hide, @options.timeout
     this
 
   # Public: Hides the notification.
@@ -90,9 +90,9 @@ Annotator.Notification.SUCCESS = 'success'
 Annotator.Notification.ERROR   = 'error'
 
 # Attach notification methods to the Annotation object on document ready.
-$(->
-  notification = new Annotator.Notification
-  Annotator.destroyables.push notification
-  Annotator.showNotification = notification.show
-  Annotator.hideNotification = notification.hide
-)
+
+notification = new Annotator.Notification
+Annotator.destroyables.push notification
+Annotator.showNotification = notification.show
+Annotator.hideNotification = notification.hide
+
