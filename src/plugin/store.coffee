@@ -307,10 +307,8 @@ class Annotator.Plugin.Store extends Annotator.Plugin
   #
   # Returns nothing.
   _onLoadAnnotationsFromSearch: (data={}) =>
-    @annotator.readlift_id = data.readlift_id
-    @annotator.readlift_user = data.readlift_user
-    @annotator.readlifts = data.readlifts
     this._onLoadAnnotations(data.rows || [])
+    @annotator.setReadliftsData(data)
 
   # Public: Dump an array of serialized annotations
   #
