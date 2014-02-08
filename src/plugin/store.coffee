@@ -147,7 +147,13 @@ class Annotator.Plugin.Store extends Annotator.Plugin
         # Update with (e.g.) ID from server.
         if not data.id?
           console.warn Annotator._t("Warning: No ID returned from server for annotation "), annotation
+        # if we create a new readlift by creating this annotation we get it back as readlift_data
         this.updateAnnotation annotation, data
+        if 'readlift_data' of data
+          readlift_data = data.readlift_data
+          delete data['readlift_data']
+          @annotator.updateReadlift(readlift_data)
+
       )
     else
       # This is called to update annotations created at load time with
