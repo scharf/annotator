@@ -151,8 +151,6 @@ class Annotator.Plugin.Document extends Annotator.Plugin
         else
           @metadata.reply_to.push a.href
 
-    console.log @metadata.reply_to
-
   # hack to get a absolute url from a possibly relative one
   _absoluteUrl: (url) ->
     img = $("<img src='#{ url }'></img>")
