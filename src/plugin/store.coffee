@@ -463,9 +463,9 @@ class Annotator.Plugin.Store extends Annotator.Plugin
   # Returns
   _dataFor: (annotation) ->
     # Store a reference to some of the fields. We can't serialize
-    # a list of HTMLElement objects.
+    # a list of HTMLElement objects or do not want to save some of them.
     saved = {}
-    for field in ["highlights", "anchors"]
+    for field in ["highlights", "anchors", "_new"]
       if annotation[field]?
         saved[field] = annotation[field]
         delete annotation[field]
