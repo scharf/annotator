@@ -249,6 +249,9 @@ class Annotator.Plugin.Store extends Annotator.Plugin
     # with ids from the server).
     $(annotation.highlights).data('annotation', annotation)
 
+    # notify anyone that the annotation has been updated
+    @annotator.publish 'annotationUpdateDone', [annotation]
+
   # Public: Makes a request to the server for all annotations.
   #
   # Examples
