@@ -57,7 +57,7 @@ class Annotator.Notification extends Delegator
   #   notification.show("An error has occurred", Annotator.Notification.ERROR)
   #
   # Returns itself.
-  show: (message, status=Annotator.Notification.INFO) =>
+  show: (message, status=Annotator.Notification.INFO, autohide=false) =>
     if not @element
       @element = $(@options.html).appendTo(document.body)[0]
       Annotator.destroyables.push this
@@ -65,7 +65,8 @@ class Annotator.Notification extends Delegator
       .addClass(@options.classes.show)
       .addClass(@options.classes[status])
       .html(message || "")
-
+    if autohide
+      setTimeout this.hide, @options.timeout
 #    setTimeout this.hide, @options.timeout
     this
 
