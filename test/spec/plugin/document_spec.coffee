@@ -1,5 +1,6 @@
-$ = require('jquery')
+Util = require('../../../src/util')
 Document = require('../../../src/plugin/document')
+$ = Util.$
 
 
 describe 'Annotator.Plugin.Document', ->
@@ -45,7 +46,7 @@ describe 'Annotator.Plugin.Document', ->
     it 'should have links with absoulte hrefs and types', ->
       assert.ok(metadata.link)
       assert.equal(metadata.link.length, 7)
-      assert.match(metadata.link[0].href, /^.+runner.html#?(\?.*)?$/)
+      assert.equal(metadata.link[0].href, window.location.href)
       assert.equal(metadata.link[1].rel, "alternate")
       assert.match(metadata.link[1].href, /^.+foo\.pdf$/)
       assert.equal(metadata.link[1].type, "application/pdf")

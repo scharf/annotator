@@ -1,5 +1,6 @@
-$ = require('jquery')
+xpath = require('../src/xpath')
 Util = require('../src/util')
+$ = Util.$
 
 class MockSelection
   rangeCount: 1
@@ -8,7 +9,7 @@ class MockSelection
   constructor: (fixElem, data) ->
 
     @root = fixElem
-    @rootXPath = Util.xpathFromNode($(fixElem))[0]
+    @rootXPath = xpath.fromNode($(fixElem))[0]
 
     @startContainer = this.resolvePath(data[0])
     @startOffset    = data[1]
@@ -20,7 +21,7 @@ class MockSelection
     @commonAncestor = @startContainer
     while not Util.contains(@commonAncestor, @endContainer)
       @commonAncestor = @commonAncestor.parentNode
-    @commonAncestorXPath = Util.xpathFromNode($(@commonAncestor))[0]
+    @commonAncestorXPath = xpath.fromNode($(@commonAncestor))[0]
 
   getRangeAt: ->
     {
@@ -107,7 +108,7 @@ fix = ->
 getFixture = (fname) ->
   if not fixtureMemo[fname]?
     fixtureMemo[fname] = $.ajax({
-      url: "fixtures/#{fname}.html"
+      url: "/test/fixtures/#{fname}.html"
       async: false
     }).responseText
 
